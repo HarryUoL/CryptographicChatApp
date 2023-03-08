@@ -25,9 +25,31 @@ def handle_client(conn, addr):
                 connected = False
 
             print(f"[{addr}] {msg}")
+
+
+            ##test recieving certificate
+            UserNumber = threading.activeCount() - 1
+            splWord = ','
+            key = msg.partition(splWord)[0]
+            identity = msg.partition(splWord)[2]
+
+            identity = FormatMsg(identity)
+            key = FormatMsg(key)
+            print(UserNumber)
+            print("identity-->"+identity)
+            print("key-->" +key)
             conn.send("Msg received".encode(FORMAT))
 
     conn.close()
+
+
+
+def FormatMsg(msg):
+    msg = msg.replace("'", "")
+    msg = msg.replace(")", "")
+    msg = msg.replace("(", "")
+    return msg
+
 
 
 def start():

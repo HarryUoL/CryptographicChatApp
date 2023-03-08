@@ -10,6 +10,7 @@ ADDR = (SERVER, PORT)
 client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 client.connect(ADDR)
 
+
 def send(msg):
     message = msg.encode(FORMAT)
     msg_length = len(message)
@@ -19,10 +20,22 @@ def send(msg):
     client.send(message)
     print(client.recv(2048).decode(FORMAT))
 
-send("Hello World!")
-input()
-send("Hello Everyone!")
-input()
-send("Hello Tim!")
 
+# send("Hello World!")
+# input()
+# send("Hello Everyone!")
+# input()
+
+#### Sample variables ####
+
+KeyA = "5"
+Identity = socket.gethostbyname(socket.gethostname())
+cert = (KeyA, Identity)
+
+####
+
+send(str(cert))
+input()
+
+input()
 send(DISCONNECT_MESSAGE)
