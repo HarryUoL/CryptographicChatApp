@@ -1,4 +1,8 @@
 import socket
+#import rsa
+###test
+
+###test
 
 HEADER = 64
 PORT = 5050
@@ -27,6 +31,8 @@ def send(msg):
 # input()
 
 #### Sample variables ####
+(pubKeys,privKey)=rsa.newkeys(512)
+
 
 KeyA = "5"
 Identity = socket.gethostbyname(socket.gethostname())
