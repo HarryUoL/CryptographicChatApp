@@ -1,5 +1,5 @@
 import socket
-#import rsa
+import rsa
 ###test
 
 ###test
@@ -31,16 +31,23 @@ def send(msg):
 # input()
 
 #### Sample variables ####
-(pubKeys,privKey)=rsa.newkeys(512)
+(pubKeys,privKey)= rsa.newkeys(512)
 
+def formatMsg(msg):
+    msg = msg.replace("PublicKey", "")
+    return msg
 
-KeyA = "5"
-Identity = socket.gethostbyname(socket.gethostname())
-cert = (KeyA, Identity)
+####with dict
 
+certificate = {
+  "Key": pubKeys,
+  "Identity": "A"
+}
 ####
 
-send(str(cert))
+msg = formatMsg(str(certificate))
+send(msg)
+
 input()
 
 input()

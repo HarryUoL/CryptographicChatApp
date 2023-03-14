@@ -1,8 +1,7 @@
 import socket
 import threading
-#import rsa
-
-
+import rsa
+import ast
 
 HEADER = 64
 PORT = 5050
@@ -31,17 +30,16 @@ def handle_client(conn, addr):
 
 
             ##test recieving certificate
-            UserNumber = threading.activeCount() - 1
-            splWord = ','
-            key = msg.partition(splWord)[0]
-            identity = msg.partition(splWord)[2]
 
-            identity = FormatMsg(identity)
-            key = FormatMsg(key)
-            print(UserNumber)
-            print("identity-->"+identity)
-            print("key-->" +key)
+            res = eval(msg)
+            key = res['Key'][0]
+            identity = res['Identity']
+            print("identity-->" + identity)
+            print("key-->" + str(key))
             conn.send("Msg received".encode(FORMAT))
+
+
+
 
     conn.close()
 
@@ -51,6 +49,13 @@ def FormatMsg(msg):
     msg = msg.replace("'", "")
     msg = msg.replace(")", "")
     msg = msg.replace("(", "")
+    msg = msg.replace("PublicKey", "")
+    msg = msg.replace("Key", "")
+    msg = msg.replace("Identity", "")
+    msg = msg.replace("{", "")
+    msg = msg.replace("}", "")
+    msg = msg.replace(":", "")
+
     return msg
 
 
