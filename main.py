@@ -32,8 +32,10 @@ def handle_client(conn, addr):
             ##test recieving certificate
 
             res = eval(msg)
+            messagetype = res['messagetype']
             key = res['Key'][0]
             identity = res['Identity']
+            print("message type-->" + messagetype)
             print("identity-->" + identity)
             print("key-->" + str(key))
             conn.send("Msg received".encode(FORMAT))
