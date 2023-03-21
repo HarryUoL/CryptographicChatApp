@@ -23,7 +23,11 @@ def send(msg):
     send_length += b' ' * (HEADER - len(send_length))
     client.send(send_length)
     client.send(message)
-    print(client.recv(2048).decode(FORMAT))
+    ####this is the recieved message
+    recievingMessage = client.recv(2048).decode(FORMAT)
+    print("recieved message=" + recievingMessage)
+    #print(client.recv(2048).decode(FORMAT))
+
 
 
 def encrypt(msgencrypt, key):
@@ -59,6 +63,7 @@ def verifyDS(msgVerify, signature, key):
 (pubKeys, privKey) = rsa.newkeys(512)
 
 
+
 def formatMsg(msg):
     msg = msg.replace("PublicKey", "")
     return msg
@@ -71,7 +76,7 @@ DS = digitalsignature(Identity+str(pubKeys), privKey)
 certificate = {
     "Key": pubKeys,
     "Identity": "A",
-    "messagetype": "cert",
+    "messagetype": "certA",
     "DigitalSignature": DS
 
 }

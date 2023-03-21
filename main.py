@@ -13,7 +13,16 @@ DISCONNECT_MESSAGE = "!DISCONNECT"
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 server.bind(ADDR)
 
+certA = {
+    "messagetype": "certA",
 
+}
+certB = {
+    "messagetype": "certA",
+}
+certC = {
+    "messagetype": "certA",
+}
 def handle_client(conn, addr):
     print(f"[NEW CONNECTION] {addr} connected.")
 
@@ -32,18 +41,40 @@ def handle_client(conn, addr):
             ##test recieving certificate
 
             res = eval(msg)
+            print("certA that is stored-->")
+            storeCerts(res)
+            # print(certA)
             messagetype = res['messagetype']
             key = res['Key'][0]
             identity = res['Identity']
             print("message type-->" + messagetype)
             print("identity-->" + identity)
             print("key-->" + str(key))
-            conn.send("Msg received".encode(FORMAT))
+            #conn.send("Msg received".encode(FORMAT))
+            #testing with cert A
+            # we need to send the two certs of the others we are not talking to rn
+            conn.send(str(certA).encode(FORMAT))
 
 
 
 
     conn.close()
+
+
+
+def storeCerts(cert):
+    if cert['messagetype'] == "certA":
+        certA.update({'publicKey': cert['Key']})
+
+    elif cert['messagetype'] == "certB":
+        certB.update({'publicKey': cert['Key']})
+
+    elif cert['messagetype'] == "certB":
+        certC.update({'publicKey': cert['Key']})
+
+
+
+
 
 
 
