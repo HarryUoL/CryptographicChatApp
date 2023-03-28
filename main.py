@@ -1,5 +1,6 @@
 import socket
 import threading
+from threading import Event
 import rsa
 import ast
 
@@ -15,13 +16,15 @@ server.bind(ADDR)
 
 certA = {
     "messagetype": "certA",
-
+    "publicKey": None
 }
 certB = {
-    "messagetype": "certA",
+    "messagetype": "certB",
+    "publicKey": 2
 }
 certC = {
-    "messagetype": "certA",
+    "messagetype": "certC",
+    "publicKey": 3
 }
 def handle_client(conn, addr):
     print(f"[NEW CONNECTION] {addr} connected.")
@@ -53,7 +56,55 @@ def handle_client(conn, addr):
             #conn.send("Msg received".encode(FORMAT))
             #testing with cert A
             # we need to send the two certs of the others we are not talking to rn
-            conn.send(str(certA).encode(FORMAT))
+
+
+
+
+            ### for example with A while cert b and c are empty wait
+            ##if its cert a or b or c then while the other two are empty wait
+            #event.set()
+            #event.clear()
+            #event.wait()
+            event = Event()
+            event.set()
+
+        if identity == 'A' and (certB['publicKey'] == None or certC['publicKey'] == None):
+              #  while (certB['publicKey'] == None or certC['publicKey'] == None):
+                    event.clear()
+                    print("****WAITING*****!!!!!!!!!")
+                    event.wait()
+                    event.set()
+        elif identity == 'A' and (certB['publicKey'] != None and certC['publicKey'] != None):
+                print("THIS SHOULD BE CERT B-->" + str(certB))
+                conn.send(str(certB).encode(FORMAT))
+                split = "split"
+                conn.send(split.encode(FORMAT))
+                conn.send(str(certC).encode(FORMAT))
+
+
+
+        if identity == 'B' and (certA['publicKey'] == None or certC['publicKey'] == None):
+
+                    event.clear()
+                    print("****WAITING*****!!!!!!!!!")
+                    event.wait()
+                    event.set()
+        elif identity == 'B'and (certA['publicKey'] != None and certC['publicKey'] != None):
+             conn.send(str(certA).encode(FORMAT))
+             conn.send(str(certC).encode(FORMAT))
+
+        if identity == 'C' and (certA['publicKey'] == None or certB['publicKey'] == None):
+
+                    event.clear()
+                    print("****WAITING*****!!!!!!!!!")
+                    event.wait()
+                    event.set()
+
+        elif identity == 'C'and (certA['publicKey'] != None and certB['publicKey'] != None):
+                conn.send(str(certA).encode(FORMAT))
+                conn.send(str(certB).encode(FORMAT))
+
+
 
 
 
@@ -69,7 +120,7 @@ def storeCerts(cert):
     elif cert['messagetype'] == "certB":
         certB.update({'publicKey': cert['Key']})
 
-    elif cert['messagetype'] == "certB":
+    elif cert['messagetype'] == "certC":
         certC.update({'publicKey': cert['Key']})
 
 

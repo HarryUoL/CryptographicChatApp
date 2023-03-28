@@ -1,5 +1,7 @@
+import ast
 import socket
 import rsa
+import json
 
 ###test
 
@@ -15,6 +17,14 @@ Identity ='A'
 client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 client.connect(ADDR)
 
+certB = {
+    "messagetype": "certB",
+    "publicKey": None
+}
+certC = {
+    "messagetype": "certC",
+    "publicKey": None
+}
 
 def send(msg):
     message = msg.encode(FORMAT)
@@ -24,10 +34,55 @@ def send(msg):
     client.send(send_length)
     client.send(message)
     ####this is the recieved message
+    input()
     recievingMessage = client.recv(2048).decode(FORMAT)
+    #eval(recievingMessage)
+    ######This is to store certs recieved
+    #create 2 dicts out of string
+    certB, certC = create2Dicts(recievingMessage)
+
+
+
+    #storeCerts(res1)
+    print("certB=" + str(certB))
     print("recieved message=" + recievingMessage)
     #print(client.recv(2048).decode(FORMAT))
 
+
+def create2Dicts(Message):
+
+    Cert1= Message.split("split")
+    Cert1 = Cert1[0]
+
+    dict_strings = Cert1.split('}')
+
+    # iterate over the dictionary strings and extract the dictionary key-value pairs
+    for d_str in dict_strings:
+        if d_str:
+            if 'certB' in d_str:
+                # add back the '}' character removed by the split method
+                d_str += '}'
+                # convert the dictionary string to a dictionary object
+
+                d_dict = eval(d_str)
+            elif 'certC' in d_str:
+                # add back the '}' character removed by the split method
+                d_str += '}'
+                # convert the dictionary string to a dictionary object
+
+                d_dict2 = eval(d_str)
+    print(d_dict)
+    print(d_dict2)
+
+
+    return d_dict, d_dict2
+
+def formatCerts(Message):
+    Message = Message.replace("[", "")
+    Message = Message.replace("]", "")
+    Message = Message.replace("'"'', "")
+
+    return Message
 
 
 def encrypt(msgencrypt, key):
@@ -62,7 +117,13 @@ def verifyDS(msgVerify, signature, key):
 
 (pubKeys, privKey) = rsa.newkeys(512)
 
+def storeCerts(cert):
 
+    if cert['messagetype'] == "certB":
+        certB.update({'publicKey': cert['Key']})
+
+    elif cert['messagetype'] == "certC":
+        certC.update({'publicKey': cert['Key']})
 
 def formatMsg(msg):
     msg = msg.replace("PublicKey", "")
@@ -101,4 +162,5 @@ digitalSignature = digitalsignature(certificate['Identity']+str(certificate['Key
 print(verifyDS(certificate['Identity']+str(certificate['Key']), digitalSignature, pubKeys))
 
 input()
-send(DISCONNECT_MESSAGE)
+
+#send(DISCONNECT_MESSAGE)
