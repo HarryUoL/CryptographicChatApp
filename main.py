@@ -108,47 +108,60 @@ def handle_client(conn, addr):
 
 
             ##test recieving certificate
+            try:
+                res = eval(msg)
+                cert = 'true'
+            except:
+                cert = 'false'
+                pass
 
-            res = eval(msg)
-            messagetype = res['messagetype']
-            ###make sure nonce is stored
-            ### Nonce1 = res['Nonce1']
-            key2 = rsa.PublicKey(res['Key'][0], res['Key'][1])
-            identity = res['Identity']
-            DS = res['DigitalSignature']
-            #print("cert that is stored-->")
-            ###this is S verifying what it recieved from A
-            verification = verifyDS(identity+str(key2), DS, key2)
-            if verification == 'true':
-                storeCerts(res)
+            if cert == 'true':
+                messagetype = res['messagetype']
+                ###make sure nonce is stored
+                ### Nonce1 = res['Nonce1']
+                key2 = rsa.PublicKey(res['Key'][0], res['Key'][1])
+                identity = res['Identity']
+                DS = res['DigitalSignature']
+                #print("cert that is stored-->")
+                ###this is S verifying what it recieved from A
+                verification = verifyDS(identity+str(key2), DS, key2)
+                if verification == 'true':
+                    storeCerts(res)
 
-                # ILL JUST SEND DUMMY ATM
-                # SENDS NONCE1 AND ITS OWN NONCE LETS SAY N2 ENCYPTED WITH PUBKEY OF A
-                # ASWELL AS ABOVE HASHED
-                ###ill have to change NonceA1 to res['nonce1'] or something 1 to identify its not a key a,b,c are keys then
-                ### i could add a way to store nonces in the store cert function???
-                ###probably have if statement here for identities???
+                    # ILL JUST SEND DUMMY ATM
+                    # SENDS NONCE1 AND ITS OWN NONCE LETS SAY N2 ENCYPTED WITH PUBKEY OF A
+                    # ASWELL AS ABOVE HASHED
+                    ###ill have to change NonceA1 to res['nonce1'] or something 1 to identify its not a key a,b,c are keys then
+                    ### i could add a way to store nonces in the store cert function???
+                    ###probably have if statement here for identities???
 
-                #this stores the nonces and encrypts them in SAuthA
-                storeNonce(res, NonceA1)
+                    #this stores the nonces and encrypts them in SAuthA
+                    storeNonce(res, NonceA1)
 
 
-                ###store certs only done for A
-                ### i  need to ds NonceA1 and NonceS with private key of S
-                ### then add it to SAuthA
+                    ###store certs only done for A
+                    ### i  need to ds NonceA1 and NonceS with private key of S
+                    ### then add it to SAuthA
 
-                DSA = digitalsignature(str(NonceA1), privKeyS)
-                DSA2 = digitalsignature(str(NonceS), privKeyS)
-                SAuthA.update({'DSA': (DSA, DSA2)})
+                    DSA = digitalsignature(str(NonceA1), privKeyS)
+                    DSA2 = digitalsignature(str(NonceS), privKeyS)
+                    SAuthA.update({'DSA': (DSA, DSA2)})
 
-                conn.send(str(SAuthA).encode(FORMAT))
-                split = "split"
-                conn.send(split.encode(FORMAT))
+                    conn.send(str(SAuthA).encode(FORMAT))
+                    split = "split"
+                    conn.send(split.encode(FORMAT))
 
 
             #A sends back nonce of server here so we must verify
-
-
+            msg_length = conn.recv(HEADER).decode(FORMAT)
+            if msg_length:
+                msg_length = int(msg_length)
+               # msg = conn.recv(2048).decode(FORMAT)
+            VerifyingNonce = conn.recv(2048).decode(FORMAT)
+            #eval to go from string to dict
+            VerifyingNonce = eval(VerifyingNonce)
+            #this verifys that Client sends correct nonce back to S
+            verification = verifyDS(str(NonceS), VerifyingNonce['DSNonceS'], key2)
 
             ### for example with A while cert b and c are empty wait
             ##if its cert a or b or c then while the other two are empty wait

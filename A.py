@@ -28,7 +28,12 @@ certC = {
     "messagetype": "certC",
     "publicKey": None
 }
+ArespondS = {
+    "messagetype": "ArespondS",
+    "eNonceS": None,
+    "DSNonceS": None
 
+}
 def send(msg):
     message = msg.encode(FORMAT)
     msg_length = len(message)
@@ -44,15 +49,29 @@ def send(msg):
 
     ##this formats SAuthA from string to dict for us
     SAuthA = createSAuthA(recievingMessage)
+    #verifys if s responds to nonce
     verified = verifyDS(str(NonceA1), SAuthA['DSA'][0], pubKeyS)
     if verified == 'true':
         ##here we verified our own nonce so we now have to send back nonce of s
         ##encrypted with Ks and the same digitally signed
-        NonceS = decrypt(['NonceA1&S'][1], privKey)
-        client.send(NonceS)
+        NonceS = decrypt(SAuthA['NonceA1&S'][1], privKey)
+        eNonceS = encrypt(NonceS, pubKeyS)
+        DSNonceS = digitalsignature(NonceS,privKey)
+
+        ArespondS.update({"eNonceS": eNonceS})
+        ArespondS.update({"DSNonceS": DSNonceS})
+        #conn.send(str(certC).encode(FORMAT))
+        msg_length = len(ArespondS)
+        send_length = str(msg_length).encode(FORMAT)
+        send_length += b' ' * (HEADER - len(send_length))
+        client.send(send_length)
+        client.send(str(ArespondS).encode(FORMAT))
 
     ######This is to store certs recieved
     # create 2 dicts out of string
+    ##test
+    recievingMessage = client.recv(2048).decode(FORMAT)
+
     certB = createCertB(recievingMessage)
     certC = createCertC(recievingMessage)
 
