@@ -4,7 +4,8 @@ import rsa
 import json
 
 ###test
-
+NonceA1 = 3
+NonceS = 0
 ###test
 
 HEADER = 64
@@ -16,6 +17,8 @@ ADDR = (SERVER, PORT)
 Identity ='A'
 client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 client.connect(ADDR)
+
+pubKeyS = rsa.PublicKey(8368535986424301519677425007078978282009409033444347711859615499370048341703074655505522462102048766899036091098557433327396428069258465008565662942145717, 65537)
 
 certB = {
     "messagetype": "certB",
@@ -35,24 +38,36 @@ def send(msg):
     client.send(message)
     ####this is the recieved message
     input()
+
     recievingMessage = client.recv(2048).decode(FORMAT)
     #eval(recievingMessage)
+
+    ##this formats SAuthA from string to dict for us
+    SAuthA = createSAuthA(recievingMessage)
+    verified = verifyDS(str(NonceA1), SAuthA['DSA'][0], pubKeyS)
+    if verified == 'true':
+        ##here we verified our own nonce so we now have to send back nonce of s
+        ##encrypted with Ks and the same digitally signed
+        NonceS = decrypt(['NonceA1&S'][1], privKey)
+        client.send(NonceS)
+
     ######This is to store certs recieved
-    #create 2 dicts out of string
-    certB, certC = create2Dicts(recievingMessage)
+    # create 2 dicts out of string
+    certB = createCertB(recievingMessage)
+    certC = createCertC(recievingMessage)
 
 
 
     #storeCerts(res1)
-    print("certB=" + str(certB))
+    #print("certB=" + str(certB))
     print("recieved message=" + recievingMessage)
     #print(client.recv(2048).decode(FORMAT))
 
 
-def create2Dicts(Message):
+def createCertB(Message):
 
     Cert1= Message.split("split")
-    Cert1 = Cert1[0]
+    Cert1 = Cert1[1]
 
     dict_strings = Cert1.split('}')
 
@@ -65,17 +80,61 @@ def create2Dicts(Message):
                 # convert the dictionary string to a dictionary object
 
                 d_dict = eval(d_str)
-            elif 'certC' in d_str:
+
+    #print(d_dict)
+  #  print(d_dict2)
+
+
+    return d_dict
+
+
+def createCertC(Message):
+    Cert1 = Message.split("split")
+    Cert1 = Cert1[2]
+
+    dict_strings = Cert1.split('}')
+
+    # iterate over the dictionary strings and extract the dictionary key-value pairs
+    for d_str in dict_strings:
+        if d_str:
+            if 'certC' in d_str:
                 # add back the '}' character removed by the split method
                 d_str += '}'
                 # convert the dictionary string to a dictionary object
 
-                d_dict2 = eval(d_str)
-    print(d_dict)
-    print(d_dict2)
+                d_dict = eval(d_str)
+
+    #print(d_dict)
+    #  print(d_dict2)
+
+    return d_dict
 
 
-    return d_dict, d_dict2
+def createSAuthA(Message):
+
+    Cert1= Message.split("split")
+    Cert1 = Cert1[0]
+
+    #dict_strings = Cert1.split('}')
+    dict_strings = Cert1.rsplit('}', 1)
+
+    # iterate over the dictionary strings and extract the dictionary key-value pairs
+    for d_str in dict_strings:
+        if d_str:
+            if 'SAuthA' in d_str:
+                # add back the '}' character removed by the split method
+                d_str += '}'
+                # convert the dictionary string to a dictionary object
+
+                d_dict = eval(d_str)
+
+
+
+
+    return d_dict
+
+
+
 
 def formatCerts(Message):
     Message = Message.replace("[", "")
@@ -145,21 +204,24 @@ certificate = {
 
 msg = formatMsg(str(certificate))
 send(msg)
+
+
+
 ####example of using encrypt,decrypt, digital signature and verify functions
 ##encrypt
-print("encrypted message-->" + str(encrypt(certificate['Identity'], certificate['Key'])))
+#print("encrypted message-->" + str(encrypt(certificate['Identity'], certificate['Key'])))
 
 #decrypt
-encryptedText = encrypt(certificate['Identity'], certificate['Key'])
-print("decrypted message-->" + str(decrypt(encryptedText, privKey)))
+#encryptedText = encrypt(certificate['Identity'], certificate['Key'])
+#print("decrypted message-->" + str(decrypt(encryptedText, privKey)))
 
 #digital signature
-print("Digital Signature-->" + str(digitalsignature(certificate['Identity']+str(certificate['Key']), privKey)))
-digitalSignature = digitalsignature(certificate['Identity']+str(certificate['Key']), privKey)
+#print("Digital Signature-->" + str(digitalsignature(certificate['Identity']+str(certificate['Key']), privKey)))
+#digitalSignature = digitalsignature(certificate['Identity']+str(certificate['Key']), privKey)
 
 ##verify digital signature
 #it returns true if it verifys it and false if it doesn't
-print(verifyDS(certificate['Identity']+str(certificate['Key']), digitalSignature, pubKeys))
+#print(verifyDS(certificate['Identity']+str(certificate['Key']), digitalSignature, pubKeys))
 
 input()
 

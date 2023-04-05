@@ -3,6 +3,7 @@ import threading
 from threading import Event
 import rsa
 import ast
+import hashlib
 
 HEADER = 64
 PORT = 5050
@@ -14,6 +15,9 @@ DISCONNECT_MESSAGE = "!DISCONNECT"
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 server.bind(ADDR)
 
+pubKeyS = rsa.PublicKey(8368535986424301519677425007078978282009409033444347711859615499370048341703074655505522462102048766899036091098557433327396428069258465008565662942145717, 65537)
+privKeyS = rsa.PrivateKey(8368535986424301519677425007078978282009409033444347711859615499370048341703074655505522462102048766899036091098557433327396428069258465008565662942145717, 65537, 6652230812346619649497461482350221288425807910131936744084082717475350382459383323752051550397378681633251414741039522254878998390999853774646427340032513, 7565317343113682473003719157066451814412526235676237417376197496664743312864051731, 1106171176552395053279328787437653065548540673055795968788597324959395607)
+#key2 = rsa.PublicKey(res['Key'][0], res['Key'][1])
 certA = {
     "messagetype": "certA",
     "publicKey": None
@@ -26,6 +30,68 @@ certC = {
     "messagetype": "certC",
     "publicKey": 3
 }
+##this should be got from when A sends cert originally
+NonceA1 = 3
+##this is S nonce which needs to be created dynamically
+NonceS = 5
+#(NonceS,NonceA1)
+#"NonceS&A1":
+# "NonceS":
+
+SAuthA = {
+    'messagetype': 'SAuthA',
+    'NonceA1&S': '',
+    'DSA': ''
+}
+SAuthB = {
+    "messagetype": "SAuthB",
+    "NonceB1&S": "",
+    "DSB": ""
+}
+SAuthC = {
+    "messagetype": "SAuthC",
+    "NonceC1&S": "",
+    "DSC": ""
+}
+####FUNCTIONS FOR THE OPERATIONS
+def hash(message):
+    # Create a hash object with the specified algorithm
+    hash_object = hashlib.new("sha256")
+    # Update the hash object with the input string encoded as bytes
+    hash_object.update(message.encode())
+    # Get the hexadecimal representation of the hash
+    hash_hex = hash_object.hexdigest()
+    return hash_hex
+
+def encrypt(msgencrypt, key):
+    message = msgencrypt.encode(FORMAT)
+    msgencrypt = rsa.encrypt(message, key)
+    return msgencrypt
+
+
+def decrypt(msgdecrypt, key):
+    msgdecrypt = rsa.decrypt(msgdecrypt, key)
+    msgdecrypt = msgdecrypt.decode(FORMAT)
+    return msgdecrypt
+
+
+def digitalsignature(msgSign, key):
+    msgSign = msgSign.encode(FORMAT)
+    msgSign = rsa.sign(msgSign, key, 'SHA-256')
+    return msgSign
+
+
+def verifyDS(msgVerify, signature, key):
+    msgVerify = msgVerify.encode(FORMAT)
+    msgVerify = rsa.verify(msgVerify, signature, key)
+    if msgVerify == 'SHA-256':
+        true = 'true'
+        return true
+    else:
+        false ='false'
+        return false
+
+
 def handle_client(conn, addr):
     print(f"[NEW CONNECTION] {addr} connected.")
 
@@ -44,19 +110,43 @@ def handle_client(conn, addr):
             ##test recieving certificate
 
             res = eval(msg)
-            print("certA that is stored-->")
-            storeCerts(res)
-            # print(certA)
             messagetype = res['messagetype']
-            key = res['Key'][0]
+            ###make sure nonce is stored
+            ### Nonce1 = res['Nonce1']
+            key2 = rsa.PublicKey(res['Key'][0], res['Key'][1])
             identity = res['Identity']
-            print("message type-->" + messagetype)
-            print("identity-->" + identity)
-            print("key-->" + str(key))
-            #conn.send("Msg received".encode(FORMAT))
-            #testing with cert A
-            # we need to send the two certs of the others we are not talking to rn
+            DS = res['DigitalSignature']
+            #print("cert that is stored-->")
+            ###this is S verifying what it recieved from A
+            verification = verifyDS(identity+str(key2), DS, key2)
+            if verification == 'true':
+                storeCerts(res)
 
+                # ILL JUST SEND DUMMY ATM
+                # SENDS NONCE1 AND ITS OWN NONCE LETS SAY N2 ENCYPTED WITH PUBKEY OF A
+                # ASWELL AS ABOVE HASHED
+                ###ill have to change NonceA1 to res['nonce1'] or something 1 to identify its not a key a,b,c are keys then
+                ### i could add a way to store nonces in the store cert function???
+                ###probably have if statement here for identities???
+
+                #this stores the nonces and encrypts them in SAuthA
+                storeNonce(res, NonceA1)
+
+
+                ###store certs only done for A
+                ### i  need to ds NonceA1 and NonceS with private key of S
+                ### then add it to SAuthA
+
+                DSA = digitalsignature(str(NonceA1), privKeyS)
+                DSA2 = digitalsignature(str(NonceS), privKeyS)
+                SAuthA.update({'DSA': (DSA, DSA2)})
+
+                conn.send(str(SAuthA).encode(FORMAT))
+                split = "split"
+                conn.send(split.encode(FORMAT))
+
+
+            #A sends back nonce of server here so we must verify
 
 
 
@@ -91,6 +181,8 @@ def handle_client(conn, addr):
                     event.set()
         elif identity == 'B'and (certA['publicKey'] != None and certC['publicKey'] != None):
              conn.send(str(certA).encode(FORMAT))
+             split = "split"
+             conn.send(split.encode(FORMAT))
              conn.send(str(certC).encode(FORMAT))
 
         if identity == 'C' and (certA['publicKey'] == None or certB['publicKey'] == None):
@@ -102,6 +194,8 @@ def handle_client(conn, addr):
 
         elif identity == 'C'and (certA['publicKey'] != None and certB['publicKey'] != None):
                 conn.send(str(certA).encode(FORMAT))
+                split = "split"
+                conn.send(split.encode(FORMAT))
                 conn.send(str(certB).encode(FORMAT))
 
 
@@ -115,17 +209,33 @@ def handle_client(conn, addr):
 
 def storeCerts(cert):
     if cert['messagetype'] == "certA":
-        certA.update({'publicKey': cert['Key']})
+        key2 = rsa.PublicKey(cert['Key'][0], cert['Key'][1])
+        certA.update({'publicKey': key2})
 
     elif cert['messagetype'] == "certB":
-        certB.update({'publicKey': cert['Key']})
+        key2 = rsa.PublicKey(cert['Key'][0], cert['Key'][1])
+        certB.update({'publicKey': key2})
 
     elif cert['messagetype'] == "certC":
-        certC.update({'publicKey': cert['Key']})
+        key2 = rsa.PublicKey(cert['Key'][0], cert['Key'][1])
+        certC.update({'publicKey': key2})
 
+##########################This needs to be changed when i have s keys##############################
 
+def storeNonce(cert, NonceX):
+    if cert['messagetype'] == "certA":
 
+        eNonceX = encrypt(str(NonceX), certA['publicKey'])
+        eNonceS = encrypt(str(NonceS), certA['publicKey'])
+        #Noncea1s = eNonceX +''+ eNonceS
 
+        SAuthA.update({'NonceA1&S': (eNonceX, eNonceS)})
+
+    elif cert['messagetype'] == "certB":
+        SAuthB.update({'NonceB1': NonceX})
+
+    elif cert['messagetype'] == "certC":
+        SAuthC.update({'NonceC1': NonceX})
 
 
 
@@ -156,3 +266,12 @@ def start():
 
 print("[STARTING] server is starting...")
 start()
+
+
+
+
+
+
+
+
+
