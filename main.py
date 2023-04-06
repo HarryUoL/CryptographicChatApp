@@ -57,8 +57,11 @@ SAuthC = {
 
 SharedAuth = {
     'A':'',
+    'A2':'',
     'B':'',
-    'C':''
+    'B2':'',
+    'C':'',
+    'C2':''
 
 }
 ####FUNCTIONS FOR THE OPERATIONS
@@ -224,7 +227,8 @@ def handle_client(conn, addr):
 
             while connected:
                 msgtoforward = conn.recv(2048).decode(FORMAT)
-                msgtoforward1, msgtoforward2 = msgtoforward.split("|")
+                msgtoforward1 = msgtoforward.split("split")[0]
+                msgtoforward2 = msgtoforward.split("split")[1]
                 forward(msgtoforward1, msgtoforward2, identity)
                 break
 
@@ -247,11 +251,12 @@ def forward(msg1, msg2 , identity):
       #elif identity == 'C':
       #  SharedAuth.update(['C'], msg)
     SharedAuth.update({identity: msg1})
-    SharedAuth.update({identity: msg2})
+    identity2 = identity+'2'
+    SharedAuth.update({identity2: msg2})
     # Send other identity messages if they are present
     other_identities = ['A', 'B', 'C']
     other_identities.remove(identity)
-
+####IT WORKS TO HERE I JUST NEED TO MAKE CLIENT B & C ALSO POPULATE THEIR STUFF
     while True:
         if SharedAuth['A']!='' and SharedAuth['B']!='' and SharedAuth['C']!='':
             break

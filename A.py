@@ -118,9 +118,9 @@ def send(msg):
 
 ####now send them to S
     ## Send the two messages with a delimiter in between
-    stringtosend = str(KeyExchangeB) + '|' + str(KeyExchangeC)
+    stringtosend = str(KeyExchangeB) + 'split' + str(KeyExchangeC)
     client.send(stringtosend.encode(FORMAT))
-    print('hi')
+
 
 
    # client.send(str(KeyExchangeB).encode(FORMAT))
