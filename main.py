@@ -1,5 +1,6 @@
 import socket
 import threading
+import time
 from threading import Event
 import rsa
 import ast
@@ -52,6 +53,13 @@ SAuthC = {
     "messagetype": "SAuthC",
     "NonceC1&S": "",
     "DSC": ""
+}
+
+SharedAuth = {
+    'A':'',
+    'B':'',
+    'C':''
+
 }
 ####FUNCTIONS FOR THE OPERATIONS
 def hash(message):
@@ -171,53 +179,88 @@ def handle_client(conn, addr):
             event = Event()
             event.set()
 
-        if identity == 'A' and (certB['publicKey'] == None or certC['publicKey'] == None):
-              #  while (certB['publicKey'] == None or certC['publicKey'] == None):
-                    event.clear()
-                    print("****WAITING*****!!!!!!!!!")
-                    event.wait()
-                    event.set()
-        elif identity == 'A' and (certB['publicKey'] != None and certC['publicKey'] != None):
-                print("THIS SHOULD BE CERT B-->" + str(certB))
-                conn.send(str(certB).encode(FORMAT))
-                split = "split"
-                conn.send(split.encode(FORMAT))
-                conn.send(str(certC).encode(FORMAT))
+            if verification == 'true':
+                if identity == 'A' and (certB['publicKey'] == None or certC['publicKey'] == None):
+                      #  while (certB['publicKey'] == None or certC['publicKey'] == None):
+                            event.clear()
+                            print("****WAITING*****!!!!!!!!!")
+                            event.wait()
+                            event.set()
+                elif identity == 'A' and (certB['publicKey'] != None and certC['publicKey'] != None):
+                        print("THIS SHOULD BE CERT B-->" + str(certB))
+                        conn.send(str(certB).encode(FORMAT))
+                        #split = "split"
+                        #conn.send(split.encode(FORMAT))
+                        stringtoSend = str(certC)
+                        #conn.send(split.encode(FORMAT) + str(certC).encode(FORMAT))
+                        conn.send(stringtoSend.encode(FORMAT))
 
 
+                if identity == 'B' and (certA['publicKey'] == None or certC['publicKey'] == None):
 
-        if identity == 'B' and (certA['publicKey'] == None or certC['publicKey'] == None):
+                            event.clear()
+                            print("****WAITING*****!!!!!!!!!")
+                            event.wait()
+                            event.set()
+                elif identity == 'B'and (certA['publicKey'] != None and certC['publicKey'] != None):
+                     conn.send(str(certA).encode(FORMAT))
+                     split = "split"
+                     conn.send(split.encode(FORMAT))
+                     conn.send(str(certC).encode(FORMAT))
 
-                    event.clear()
-                    print("****WAITING*****!!!!!!!!!")
-                    event.wait()
-                    event.set()
-        elif identity == 'B'and (certA['publicKey'] != None and certC['publicKey'] != None):
-             conn.send(str(certA).encode(FORMAT))
-             split = "split"
-             conn.send(split.encode(FORMAT))
-             conn.send(str(certC).encode(FORMAT))
+                if identity == 'C' and (certA['publicKey'] == None or certB['publicKey'] == None):
 
-        if identity == 'C' and (certA['publicKey'] == None or certB['publicKey'] == None):
+                            event.clear()
+                            print("****WAITING*****!!!!!!!!!")
+                            event.wait()
+                            event.set()
 
-                    event.clear()
-                    print("****WAITING*****!!!!!!!!!")
-                    event.wait()
-                    event.set()
-
-        elif identity == 'C'and (certA['publicKey'] != None and certB['publicKey'] != None):
-                conn.send(str(certA).encode(FORMAT))
-                split = "split"
-                conn.send(split.encode(FORMAT))
-                conn.send(str(certB).encode(FORMAT))
-
+                elif identity == 'C'and (certA['publicKey'] != None and certB['publicKey'] != None):
+                        conn.send(str(certA).encode(FORMAT))
+                        split = "split"
+                        conn.send(split.encode(FORMAT))
+                        conn.send(str(certB).encode(FORMAT))
 
 
+            while connected:
+                msgtoforward1 = conn.recv(2048).decode(FORMAT)
+                msgtoforward2 = conn.recv(2048).decode(FORMAT)
+                forward(msgtoforward1, msgtoforward2, identity)
+                break
 
 
 
     conn.close()
 
+
+def forward(msg1, msg2 , identity):
+
+    #eval to go from string to dict
+    msg1 = eval(msg1)
+    msg2 = eval(msg2)
+  #  if identity == 'A':
+     #   SharedAuth.update(['A'], msg)
+
+     # elif identity == 'B':
+     #   SharedAuth.update(['B'], msg)
+
+      #elif identity == 'C':
+      #  SharedAuth.update(['C'], msg)
+    SharedAuth.update({identity: msg1})
+    SharedAuth.update({identity: msg2})
+    # Send other identity messages if they are present
+    other_identities = ['A', 'B', 'C']
+    other_identities.remove(identity)
+
+    while True:
+        if SharedAuth['A']!='' and SharedAuth['B']!='' and SharedAuth['C']!='':
+            break
+        else:
+            time.sleep(1)
+
+    value1 = SharedAuth[other_identities[0]]
+    value2 = SharedAuth[other_identities[1]]
+    return value1, value2
 
 
 def storeCerts(cert):

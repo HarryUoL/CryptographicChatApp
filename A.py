@@ -6,6 +6,7 @@ import json
 ###test
 NonceA1 = 3
 NonceS = 0
+NonceA = 2
 ###test
 
 HEADER = 64
@@ -34,6 +35,22 @@ ArespondS = {
     "DSNonceS": None
 
 }
+KeyExchangeB = {
+    'messagetype': 'KeyExchangeA',
+    'senderidentity': 'A',
+    'recieveridentity': 'B',
+    'eNonceA': '',
+    'DS': ''
+}
+KeyExchangeC = {
+    'messagetype': 'KeyExchangeA',
+    'senderidentity': 'A',
+    'recieveridentity': 'C',
+    'eNonceA': '',
+    'DS': ''
+}
+
+
 def send(msg):
     message = msg.encode(FORMAT)
     msg_length = len(message)
@@ -70,10 +87,41 @@ def send(msg):
     ######This is to store certs recieved
     # create 2 dicts out of string
     ##test
-    recievingMessage = client.recv(2048).decode(FORMAT)
+    recievingMessageB = client.recv(2048).decode(FORMAT)
+    recievingMessageC = client.recv(2048).decode(FORMAT)
+    certB = createCertB(recievingMessageB)
+    certC = createCertC(recievingMessageC)
 
-    certB = createCertB(recievingMessage)
-    certC = createCertC(recievingMessage)
+##now we send message to s wich is forwared to B/C
+## WE NEED TO ADD ENCRYPTED NONCE TO eNonceA
+# I NEED TO ADD DIGITAL SIGNATURE OF ALL OF IT TO DS
+
+#KeyExchangeB
+    ##how it should be on top
+   # eNonceA = encrypt(str(NonceA), certB['publicKey'])
+    eNonceA = encrypt(str(NonceA), pubKeyS)
+    KeyExchangeB.update({'eNonceA': eNonceA})
+    #DS
+    msgtoDS = str(KeyExchangeB['senderidentity']) + str(KeyExchangeB['recieveridentity']) + str(KeyExchangeB['eNonceA'])
+    DSB = digitalsignature(msgtoDS, privKey)
+    KeyExchangeB.update({'DS': DSB})
+
+# KeyExchangeC
+    #change aswell *******
+    #eNonceA = encrypt(NonceA, certC['publicKey'])
+    eNonceA = encrypt(str(NonceA), pubKeyS)
+    KeyExchangeC.update({'eNonceA': eNonceA})
+    # DS
+    msgtoDS = str(KeyExchangeC['senderidentity']) + str(KeyExchangeC['recieveridentity']) + str(KeyExchangeC['eNonceA'])
+    DSC = digitalsignature(msgtoDS, privKey)
+    KeyExchangeC.update({'DS': DSC})
+
+####now send them to S
+    client.send(str(KeyExchangeB).encode(FORMAT))
+    client.send(str(KeyExchangeC).encode(FORMAT))
+    print(KeyExchangeB)
+    print(KeyExchangeC)
+
 
 
 
@@ -86,7 +134,7 @@ def send(msg):
 def createCertB(Message):
 
     Cert1= Message.split("split")
-    Cert1 = Cert1[1]
+    Cert1 = Cert1[0]
 
     dict_strings = Cert1.split('}')
 
@@ -109,7 +157,7 @@ def createCertB(Message):
 
 def createCertC(Message):
     Cert1 = Message.split("split")
-    Cert1 = Cert1[2]
+    Cert1 = Cert1[0]
 
     dict_strings = Cert1.split('}')
 
