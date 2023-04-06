@@ -223,8 +223,8 @@ def handle_client(conn, addr):
 
 
             while connected:
-                msgtoforward1 = conn.recv(2048).decode(FORMAT)
-                msgtoforward2 = conn.recv(2048).decode(FORMAT)
+                msgtoforward = conn.recv(2048).decode(FORMAT)
+                msgtoforward1, msgtoforward2 = msgtoforward.split("|")
                 forward(msgtoforward1, msgtoforward2, identity)
                 break
 

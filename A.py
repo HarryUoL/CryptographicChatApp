@@ -117,10 +117,15 @@ def send(msg):
     KeyExchangeC.update({'DS': DSC})
 
 ####now send them to S
-    client.send(str(KeyExchangeB).encode(FORMAT))
-    client.send(str(KeyExchangeC).encode(FORMAT))
-    print(KeyExchangeB)
-    print(KeyExchangeC)
+    ## Send the two messages with a delimiter in between
+    stringtosend = str(KeyExchangeB) + '|' + str(KeyExchangeC)
+    client.send(stringtosend.encode(FORMAT))
+    print('hi')
+
+
+   # client.send(str(KeyExchangeB).encode(FORMAT))
+   # client.send(str(KeyExchangeC).encode(FORMAT))
+
 
 
 
