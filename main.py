@@ -33,6 +33,9 @@ certC = {
 }
 ##this should be got from when A sends cert originally
 NonceA1 = 3
+NonceB1 = 0
+NonceC1 = 0
+Nonce1=0
 ##this is S nonce which needs to be created dynamically
 NonceS = 5
 #(NonceS,NonceA1)
@@ -56,12 +59,12 @@ SAuthC = {
 }
 
 SharedAuth = {
-    'A':'',
-    'A2':'',
-    'B':'',
-    'B2':'',
-    'C':'',
-    'C2':''
+    'AB':'',
+    'AC':'',
+    'BA':'',
+    'BC':'',
+    'CA':'2',
+    'CB':'3'
 
 }
 ####FUNCTIONS FOR THE OPERATIONS
@@ -133,6 +136,8 @@ def handle_client(conn, addr):
                 key2 = rsa.PublicKey(res['Key'][0], res['Key'][1])
                 identity = res['Identity']
                 DS = res['DigitalSignature']
+                NONCE1 = res['Nonce1']
+
                 #print("cert that is stored-->")
                 ###this is S verifying what it recieved from A
                 verification = verifyDS(identity+str(key2), DS, key2)
@@ -147,20 +152,34 @@ def handle_client(conn, addr):
                     ###probably have if statement here for identities???
 
                     #this stores the nonces and encrypts them in SAuthA
-                    storeNonce(res, NonceA1)
+                    storeNonce(res, NONCE1)
 
 
                     ###store certs only done for A
                     ### i  need to ds NonceA1 and NonceS with private key of S
                     ### then add it to SAuthA
 
-                    DSA = digitalsignature(str(NonceA1), privKeyS)
+                    DSA = digitalsignature(str(NONCE1), privKeyS)
                     DSA2 = digitalsignature(str(NonceS), privKeyS)
-                    SAuthA.update({'DSA': (DSA, DSA2)})
 
-                    conn.send(str(SAuthA).encode(FORMAT))
-                    split = "split"
-                    conn.send(split.encode(FORMAT))
+                    if messagetype == "certA":
+                        SAuthA.update({'DSA': (DSA, DSA2)})
+                        conn.send(str(SAuthA).encode(FORMAT))
+                        split = "split"
+                        conn.send(split.encode(FORMAT))
+
+                    elif  messagetype == "certB":
+                        SAuthB.update({'DSB': (DSA, DSA2)})
+                        conn.send(str(SAuthB).encode(FORMAT))
+                        split = "split"
+                        conn.send(split.encode(FORMAT))
+
+                    elif  messagetype == "certC":
+                        SAuthA.update({'DSC': (DSA, DSA2)})
+                        conn.send(str(SAuthC).encode(FORMAT))
+                        split = "split"
+                        conn.send(split.encode(FORMAT))
+
 
 
             #A sends back nonce of server here so we must verify
@@ -182,7 +201,14 @@ def handle_client(conn, addr):
             event = Event()
             event.set()
 
-            if verification == 'true':
+
+## while True:
+    #    if SharedAuth['AB']!='' and SharedAuth['BA']!='' and SharedAuth['CA']!='':
+   #         break
+  #      else:
+ #           time.sleep(1)
+
+            while verification == 'true':
                 if identity == 'A' and (certB['publicKey'] == None or certC['publicKey'] == None):
                       #  while (certB['publicKey'] == None or certC['publicKey'] == None):
                             event.clear()
@@ -192,44 +218,49 @@ def handle_client(conn, addr):
                 elif identity == 'A' and (certB['publicKey'] != None and certC['publicKey'] != None):
                         print("THIS SHOULD BE CERT B-->" + str(certB))
                         conn.send(str(certB).encode(FORMAT))
-                        #split = "split"
-                        #conn.send(split.encode(FORMAT))
-                        stringtoSend = str(certC)
-                        #conn.send(split.encode(FORMAT) + str(certC).encode(FORMAT))
-                        conn.send(stringtoSend.encode(FORMAT))
 
+                        stringtoSend = str(certC)
+
+                        conn.send(stringtoSend.encode(FORMAT))
+                        break
 
                 if identity == 'B' and (certA['publicKey'] == None or certC['publicKey'] == None):
-
-                            event.clear()
+                            time.sleep(5)
                             print("****WAITING*****!!!!!!!!!")
-                            event.wait()
-                            event.set()
+
                 elif identity == 'B'and (certA['publicKey'] != None and certC['publicKey'] != None):
+
+
                      conn.send(str(certA).encode(FORMAT))
-                     split = "split"
-                     conn.send(split.encode(FORMAT))
-                     conn.send(str(certC).encode(FORMAT))
+
+                     stringtoSend = str(certC)
+
+                     conn.send(stringtoSend.encode(FORMAT))
+                     break
 
                 if identity == 'C' and (certA['publicKey'] == None or certB['publicKey'] == None):
 
-                            event.clear()
-                            print("****WAITING*****!!!!!!!!!")
-                            event.wait()
-                            event.set()
+                    time.sleep(5)
+                    print("****WAITING*****!!!!!!!!!")
 
                 elif identity == 'C'and (certA['publicKey'] != None and certB['publicKey'] != None):
                         conn.send(str(certA).encode(FORMAT))
-                        split = "split"
-                        conn.send(split.encode(FORMAT))
-                        conn.send(str(certB).encode(FORMAT))
-
+                        stringtoSend = str(certB)
+                        conn.send(stringtoSend.encode(FORMAT))
+                        break
 
             while connected:
                 msgtoforward = conn.recv(2048).decode(FORMAT)
                 msgtoforward1 = msgtoforward.split("split")[0]
                 msgtoforward2 = msgtoforward.split("split")[1]
-                forward(msgtoforward1, msgtoforward2, identity)
+                msgtorecieve1, msgtorecieve2 = forward(msgtoforward1, msgtoforward2, identity)
+
+
+                conn.send(str(msgtorecieve1).encode(FORMAT))
+                #split = "split"
+                #conn.send(split.encode(FORMAT))
+                conn.send(str(msgtorecieve2).encode(FORMAT))
+
                 break
 
 
@@ -250,21 +281,27 @@ def forward(msg1, msg2 , identity):
 
       #elif identity == 'C':
       #  SharedAuth.update(['C'], msg)
-    SharedAuth.update({identity: msg1})
-    identity2 = identity+'2'
-    SharedAuth.update({identity2: msg2})
+
     # Send other identity messages if they are present
     other_identities = ['A', 'B', 'C']
     other_identities.remove(identity)
+    identity1 = identity + other_identities[0]
+    SharedAuth.update({identity1: msg1})
+    identity2 = identity + other_identities[1]
+    SharedAuth.update({identity2: msg2})
 ####IT WORKS TO HERE I JUST NEED TO MAKE CLIENT B & C ALSO POPULATE THEIR STUFF
     while True:
-        if SharedAuth['A']!='' and SharedAuth['B']!='' and SharedAuth['C']!='':
+        if SharedAuth['AB']!='' and SharedAuth['BA']!='' and SharedAuth['CA']!='':
             break
         else:
             time.sleep(1)
+    other_identities[1] + identity
+    msgtorecieve1 = SharedAuth[other_identities[0] + identity]
+    msgtorecieve2 = SharedAuth[other_identities[1] + identity]
 
-    value1 = SharedAuth[other_identities[0]]
-    value2 = SharedAuth[other_identities[1]]
+    value1 = msgtorecieve1
+    value2 = msgtorecieve2
+
     return value1, value2
 
 
@@ -293,10 +330,18 @@ def storeNonce(cert, NonceX):
         SAuthA.update({'NonceA1&S': (eNonceX, eNonceS)})
 
     elif cert['messagetype'] == "certB":
-        SAuthB.update({'NonceB1': NonceX})
+        eNonceX = encrypt(str(NonceX), certB['publicKey'])
+        eNonceS = encrypt(str(NonceS), certB['publicKey'])
+        # Noncea1s = eNonceX +''+ eNonceS
+
+        SAuthB.update({'NonceB1&S': (eNonceX, eNonceS)})
 
     elif cert['messagetype'] == "certC":
-        SAuthC.update({'NonceC1': NonceX})
+        eNonceX = encrypt(str(NonceX), certB['publicKey'])
+        eNonceS = encrypt(str(NonceS), certB['publicKey'])
+        # Noncea1s = eNonceX +''+ eNonceS
+
+        SAuthC.update({'NonceC1&S': (eNonceX, eNonceS)})
 
 
 

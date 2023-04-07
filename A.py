@@ -20,7 +20,7 @@ client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 client.connect(ADDR)
 
 pubKeyS = rsa.PublicKey(8368535986424301519677425007078978282009409033444347711859615499370048341703074655505522462102048766899036091098557433327396428069258465008565662942145717, 65537)
-
+privKeyS = rsa.PrivateKey(8368535986424301519677425007078978282009409033444347711859615499370048341703074655505522462102048766899036091098557433327396428069258465008565662942145717, 65537, 6652230812346619649497461482350221288425807910131936744084082717475350382459383323752051550397378681633251414741039522254878998390999853774646427340032513, 7565317343113682473003719157066451814412526235676237417376197496664743312864051731, 1106171176552395053279328787437653065548540673055795968788597324959395607)
 certB = {
     "messagetype": "certB",
     "publicKey": None
@@ -67,7 +67,7 @@ def send(msg):
     ##this formats SAuthA from string to dict for us
     SAuthA = createSAuthA(recievingMessage)
     #verifys if s responds to nonce
-    verified = verifyDS(str(NonceA1), SAuthA['DSA'][0], pubKeyS)
+    verified = verifyDS(str(certificate['Nonce1']), SAuthA['DSA'][0], pubKeyS)
     if verified == 'true':
         ##here we verified our own nonce so we now have to send back nonce of s
         ##encrypted with Ks and the same digitally signed
@@ -123,8 +123,24 @@ def send(msg):
 
 
 
-   # client.send(str(KeyExchangeB).encode(FORMAT))
-   # client.send(str(KeyExchangeC).encode(FORMAT))
+   ###THESE SHOULD THE MESSAGES FROM B AND C
+    recievedMessage1 = client.recv(2048).decode(FORMAT)
+    #recievedMessage2 = client.recv(2048).decode(FORMAT)
+    recievedMessage2 = client.recv(2048).decode(FORMAT)
+
+##### I KNOW NEED TO VERIFY THE RECIEVED MESSAGES AND STORE THE NONCE IN THEM FOR PART OF KEY
+
+##FIRSTLY CHANGE STR TO DICT
+#CAuth # out as it is just dummy data atm
+
+    BAuthA = formatB(recievedMessage1)
+    #CAuthA = formatC(recievedMessage2)
+
+    msgtoverifyagainst = str(BAuthA['senderidentity']) + str(BAuthA['recieveridentity']) + str(BAuthA['eNonceB'])
+    verifyB =  verifyDS(msgtoverifyagainst, BAuthA['DS'], certB['publicKey'])
+
+    if verifyB == 'true':
+        BNonce = decrypt(BAuthA['eNonceB', privKey])
 
 
 
@@ -132,20 +148,30 @@ def send(msg):
 
     #storeCerts(res1)
     #print("certB=" + str(certB))
-    print("recieved message=" + recievingMessage)
+    #print("recieved message=" + recievingMessage)
     #print(client.recv(2048).decode(FORMAT))
+
+
+
+
+
+
+
 
 
 def createCertB(Message):
 
     Cert1= Message.split("split")
     Cert1 = Cert1[0]
-
+    # new_string = my_string.replace("example", "")
+    Cert1 = Cert1.replace("PublicKey", "")
     dict_strings = Cert1.split('}')
 
     # iterate over the dictionary strings and extract the dictionary key-value pairs
     for d_str in dict_strings:
         if d_str:
+
+
             if 'certB' in d_str:
                 # add back the '}' character removed by the split method
                 d_str += '}'
@@ -153,9 +179,8 @@ def createCertB(Message):
 
                 d_dict = eval(d_str)
 
-    #print(d_dict)
-  #  print(d_dict2)
 
+    d_dict['publicKey'] = rsa.PublicKey(d_dict['publicKey'][0],d_dict['publicKey'][1])
 
     return d_dict
 
@@ -163,7 +188,7 @@ def createCertB(Message):
 def createCertC(Message):
     Cert1 = Message.split("split")
     Cert1 = Cert1[0]
-
+    #Cert1 = Cert1.replace("PublicKey", "")
     dict_strings = Cert1.split('}')
 
     # iterate over the dictionary strings and extract the dictionary key-value pairs
@@ -176,9 +201,7 @@ def createCertC(Message):
 
                 d_dict = eval(d_str)
 
-    #print(d_dict)
-    #  print(d_dict2)
-
+    #d_dict['publicKey'] = rsa.PublicKey(d_dict['publicKey'][0], d_dict['publicKey'][1])
     return d_dict
 
 
@@ -200,13 +223,48 @@ def createSAuthA(Message):
 
                 d_dict = eval(d_str)
 
-
-
-
     return d_dict
 
 
+def formatB(Message):
 
+    Cert1= Message.split("split")
+    Cert1 = Cert1[0]
+
+    #dict_strings = Cert1.split('}')
+    dict_strings = Cert1.rsplit('}', 1)
+
+    # iterate over the dictionary strings and extract the dictionary key-value pairs
+    for d_str in dict_strings:
+        if d_str:
+            if 'KeyExchangeB' in d_str:
+                # add back the '}' character removed by the split method
+                d_str += '}'
+                # convert the dictionary string to a dictionary object
+
+                d_dict = eval(d_str)
+
+    return d_dict
+
+def formatC(Message):
+
+    Cert1= Message.split("split")
+    Cert1 = Cert1[0]
+
+    #dict_strings = Cert1.split('}')
+    dict_strings = Cert1.rsplit('}', 1)
+
+    # iterate over the dictionary strings and extract the dictionary key-value pairs
+    for d_str in dict_strings:
+        if d_str:
+            if 'KeyExchangeC' in d_str:
+                # add back the '}' character removed by the split method
+                d_str += '}'
+                # convert the dictionary string to a dictionary object
+
+                d_dict = eval(d_str)
+
+    return d_dict
 
 def formatCerts(Message):
     Message = Message.replace("[", "")
@@ -269,6 +327,7 @@ certificate = {
     "Key": pubKeys,
     "Identity": "A",
     "messagetype": "certA",
+    "Nonce1": 4,
     "DigitalSignature": DS
 
 }
