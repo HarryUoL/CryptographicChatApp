@@ -99,7 +99,7 @@ def send(msg):
 #KeyExchangeB
     ##how it should be on top
    # eNonceA = encrypt(str(NonceA), certB['publicKey'])
-    eNonceA = encrypt(str(NonceA), pubKeyS)
+    eNonceA = encrypt(str(NonceA), certB['publicKey'])
     KeyExchangeB.update({'eNonceA': eNonceA})
     #DS
     msgtoDS = str(KeyExchangeB['senderidentity']) + str(KeyExchangeB['recieveridentity']) + str(KeyExchangeB['eNonceA'])
@@ -108,6 +108,7 @@ def send(msg):
 
 # KeyExchangeC
     #change aswell *******
+    #
     #eNonceA = encrypt(NonceA, certC['publicKey'])
     eNonceA = encrypt(str(NonceA), pubKeyS)
     KeyExchangeC.update({'eNonceA': eNonceA})
@@ -120,8 +121,6 @@ def send(msg):
     ## Send the two messages with a delimiter in between
     stringtosend = str(KeyExchangeB) + 'split' + str(KeyExchangeC)
     client.send(stringtosend.encode(FORMAT))
-
-
 
    ###THESE SHOULD THE MESSAGES FROM B AND C
     recievedMessage1 = client.recv(2048).decode(FORMAT)
@@ -136,12 +135,14 @@ def send(msg):
     BAuthA = formatB(recievedMessage1)
     #CAuthA = formatC(recievedMessage2)
 
+    ####GOT TO DO THIS FOR C
     msgtoverifyagainst = str(BAuthA['senderidentity']) + str(BAuthA['recieveridentity']) + str(BAuthA['eNonceB'])
     verifyB =  verifyDS(msgtoverifyagainst, BAuthA['DS'], certB['publicKey'])
 
     if verifyB == 'true':
-        BNonce = decrypt(BAuthA['eNonceB', privKey])
-
+        #BNonce = decrypt(BAuthA['eNonceB', privKey])
+        #stringtodecrypt =
+        BNonce = decrypt(BAuthA['eNonceB'], privKey)
 
 
 

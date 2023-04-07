@@ -96,7 +96,7 @@ def send(msg):
 ## WE NEED TO ADD ENCRYPTED NONCE TO eNonceA
 # I NEED TO ADD DIGITAL SIGNATURE OF ALL OF IT TO DS
 
-#KeyExchangeB
+#KeyExchangeA
     ##how it should be on top
    # eNonceA = encrypt(str(NonceA), certB['publicKey'])
     eNonceB = encrypt(str(NonceB), certA['publicKey'])
@@ -122,18 +122,32 @@ def send(msg):
     stringtosend = str(KeyExchangeA) + 'split' + str(KeyExchangeC)
     client.send(stringtosend.encode(FORMAT))
 
+    ###THESE SHOULD THE MESSAGES FROM B AND C
+    recievedMessage1 = client.recv(2048).decode(FORMAT)
+    recievedMessage2 = client.recv(2048).decode(FORMAT)
 
+    ##### I KNOW NEED TO VERIFY THE RECIEVED MESSAGES AND STORE THE NONCE IN THEM FOR PART OF KEY
 
-   # client.send(str(KeyExchangeB).encode(FORMAT))
-   # client.send(str(KeyExchangeC).encode(FORMAT))
+    ##FIRSTLY CHANGE STR TO DICT
+    # CAuth # out as it is just dummy data atm
 
+    AAuthA = formatA(recievedMessage1)
+    # CAuthA = formatC(recievedMessage2)
 
+    ####GOT TO DO THIS FOR C
+    msgtoverifyagainst = str(AAuthA['senderidentity']) + str(AAuthA['recieveridentity']) + str(AAuthA['eNonceB'])
+    verifyA = verifyDS(msgtoverifyagainst, AAuthA['DS'], certA['publicKey'])
+
+    if verifyA == 'true':
+        # BNonce = decrypt(BAuthA['eNonceB', privKey])
+        # stringtodecrypt =
+        ANonce = decrypt(AAuthA['eNonceA'], privKey)
 
 
 
     #storeCerts(res1)
     #print("certB=" + str(certB))
-    print("recieved message=" + recievingMessage)
+    #print("recieved message=" + recievingMessage)
     #print(client.recv(2048).decode(FORMAT))
 
 
@@ -205,7 +219,45 @@ def createSAuthB(Message):
     return d_dict
 
 
+def formatA(Message):
 
+    Cert1= Message.split("split")
+    Cert1 = Cert1[0]
+
+    #dict_strings = Cert1.split('}')
+    dict_strings = Cert1.rsplit('}', 1)
+
+    # iterate over the dictionary strings and extract the dictionary key-value pairs
+    for d_str in dict_strings:
+        if d_str:
+            if 'KeyExchangeA' in d_str:
+                # add back the '}' character removed by the split method
+                d_str += '}'
+                # convert the dictionary string to a dictionary object
+
+                d_dict = eval(d_str)
+
+    return d_dict
+
+def formatC(Message):
+
+    Cert1= Message.split("split")
+    Cert1 = Cert1[0]
+
+    #dict_strings = Cert1.split('}')
+    dict_strings = Cert1.rsplit('}', 1)
+
+    # iterate over the dictionary strings and extract the dictionary key-value pairs
+    for d_str in dict_strings:
+        if d_str:
+            if 'KeyExchangeC' in d_str:
+                # add back the '}' character removed by the split method
+                d_str += '}'
+                # convert the dictionary string to a dictionary object
+
+                d_dict = eval(d_str)
+
+    return d_dict
 
 def formatCerts(Message):
     Message = Message.replace("[", "")
