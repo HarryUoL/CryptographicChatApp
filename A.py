@@ -122,7 +122,7 @@ def send(msg):
     #change aswell *******
     #
     #eNonceA = encrypt(NonceA, certC['publicKey'])
-    eNonceA = encrypt(str(NonceA), pubKeyS)
+    eNonceA = encrypt(str(NonceA), certC['publicKey'])
     KeyExchangeC.update({'eNonceA': eNonceA})
     # DS
     msgtoDS = str(KeyExchangeC['senderidentity']) + str(KeyExchangeC['recieveridentity']) + str(KeyExchangeC['eNonceA'])
@@ -152,7 +152,7 @@ def send(msg):
     verifyB =  verifyDS(msgtoverifyagainst, BAuthA['DS'], certB['publicKey'])
 
     ##FOR C
-    msgtoverifyagainst2 = str(CAuthA['senderidentity']) + str(CAuthA['recieveridentity']) + str(CAuthA['eNonceB'])
+    msgtoverifyagainst2 = str(CAuthA['senderidentity']) + str(CAuthA['recieveridentity']) + str(CAuthA['eNonceC'])
     verifyC = verifyDS(msgtoverifyagainst2, CAuthA['DS'], certC['publicKey'])
 
     if verifyB == 'true':
@@ -247,7 +247,7 @@ def createCertB(Message):
 def createCertC(Message):
     Cert1 = Message.split("split")
     Cert1 = Cert1[0]
-    #Cert1 = Cert1.replace("PublicKey", "")
+    Cert1 = Cert1.replace("PublicKey", "")
     dict_strings = Cert1.split('}')
 
     # iterate over the dictionary strings and extract the dictionary key-value pairs
@@ -260,7 +260,7 @@ def createCertC(Message):
 
                 d_dict = eval(d_str)
 
-    #d_dict['publicKey'] = rsa.PublicKey(d_dict['publicKey'][0], d_dict['publicKey'][1])
+    d_dict['publicKey'] = rsa.PublicKey(d_dict['publicKey'][0], d_dict['publicKey'][1])
     return d_dict
 
 
@@ -407,13 +407,13 @@ while connected:
     Message = input("What is your Message? ")
     client.send(Message.encode(FORMAT))
 
-# Wait for up to 5 seconds to receive data from the client
-ready, _, _ = select.select([client],[], 5)
-if not ready:
-    print('No data received within 5 seconds')
-else:
-    data = client.recv(2048).decode(FORMAT)
-    print('Received data:', data)
+    # Wait for up to 5 seconds to receive data from the client
+    ready, _, _ = select.select([client],[], 5)
+    if not ready:
+     print('No data received within 5 seconds')
+    else:
+      data = client.recv(2048).decode(FORMAT)
+      print('Received data:', data)
 
 input()
 #send(DISCONNECT_MESSAGE)

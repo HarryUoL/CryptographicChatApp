@@ -26,11 +26,11 @@ certA = {
 }
 certB = {
     "messagetype": "certB",
-    "publicKey": 2
+    "publicKey": None
 }
 certC = {
     "messagetype": "certC",
-    "publicKey": 3
+    "publicKey": None
 }
 ##this should be got from when A sends cert originally
 NonceA1 = 0
@@ -65,8 +65,8 @@ SharedAuth = {
     'AC':'',
     'BA':'',
     'BC':'',
-    'CA':'2',
-    'CB':'3'
+    'CA':'',
+    'CB':''
 
 }
 MessagesDict = {}
@@ -355,8 +355,8 @@ def storeNonce(cert, NonceX):
         SAuthB.update({'NonceB1&S': (eNonceX, eNonceS)})
 
     elif cert['messagetype'] == "certC":
-        eNonceX = encrypt(str(NonceX), certB['publicKey'])
-        eNonceS = encrypt(str(NonceS), certB['publicKey'])
+        eNonceX = encrypt(str(NonceX), certC['publicKey'])
+        eNonceS = encrypt(str(NonceS), certC['publicKey'])
         # Noncea1s = eNonceX +''+ eNonceS
 
         SAuthC.update({'NonceC1&S': (eNonceX, eNonceS)})

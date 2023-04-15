@@ -160,7 +160,7 @@ def send(msg):
     if verifyC == 'true':
         # BNonce = decrypt(BAuthA['eNonceB', privKey])
         # stringtodecrypt =
-        CNonce = decrypt(AAuthB['eNonceC'], privKey)
+        CNonce = decrypt(CAuthB['eNonceC'], privKey)
 
     #########HERE WE START WITH AES (GOT TO DO ABOVE FOR C ASWELL)
 
@@ -253,7 +253,7 @@ def createCertA(Message):
 def createCertC(Message):
     Cert1 = Message.split("split")
     Cert1 = Cert1[0]
-    #Cert1 = Cert1.replace("PublicKey", "")
+    Cert1 = Cert1.replace("PublicKey", "")
     dict_strings = Cert1.split('}')
 
     # iterate over the dictionary strings and extract the dictionary key-value pairs
@@ -266,7 +266,7 @@ def createCertC(Message):
 
                 d_dict = eval(d_str)
 
-    #d_dict['publicKey'] = rsa.PublicKey(d_dict['publicKey'][0], d_dict['publicKey'][1])
+    d_dict['publicKey'] = rsa.PublicKey(d_dict['publicKey'][0], d_dict['publicKey'][1])
     return d_dict
 
 
@@ -414,12 +414,12 @@ while connected:
     client.send(Message.encode(FORMAT))
 
 # Wait for up to 5 seconds to receive data from the client
-ready, _, _ = select.select([client],[], 5)
-if not ready:
-    print('No data received within 5 seconds')
-else:
-    data = client.recv(2048).decode(FORMAT)
-    print('Received data:', data)
+    ready, _, _ = select.select([client],[], 5)
+    if not ready:
+     print('No data received within 5 seconds')
+    else:
+     data = client.recv(2048).decode(FORMAT)
+     print('Received data:', data)
 
 
 input()

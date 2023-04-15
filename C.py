@@ -149,7 +149,7 @@ def send(msg):
 
     #FOR C
     msgtoverifyagainst = str(BAuthC['senderidentity']) + str(BAuthC['recieveridentity']) + str(BAuthC['eNonceB'])
-    verifyB = verifyDS(msgtoverifyagainst, BAuthC['DS'], BAuthC['publicKey'])
+    verifyB = verifyDS(msgtoverifyagainst, BAuthC['DS'], certB['publicKey'])
 
 
     if verifyA == 'true':
@@ -253,20 +253,20 @@ def createCertA(Message):
 def createCertB(Message):
     Cert1 = Message.split("split")
     Cert1 = Cert1[0]
-    #Cert1 = Cert1.replace("PublicKey", "")
+    Cert1 = Cert1.replace("PublicKey", "")
     dict_strings = Cert1.split('}')
 
     # iterate over the dictionary strings and extract the dictionary key-value pairs
     for d_str in dict_strings:
         if d_str:
-            if 'certC' in d_str:
+            if 'certB' in d_str:
                 # add back the '}' character removed by the split method
                 d_str += '}'
                 # convert the dictionary string to a dictionary object
 
                 d_dict = eval(d_str)
 
-    #d_dict['publicKey'] = rsa.PublicKey(d_dict['publicKey'][0], d_dict['publicKey'][1])
+    d_dict['publicKey'] = rsa.PublicKey(d_dict['publicKey'][0], d_dict['publicKey'][1])
     return d_dict
 
 
@@ -281,7 +281,7 @@ def createSAuthC(Message):
     # iterate over the dictionary strings and extract the dictionary key-value pairs
     for d_str in dict_strings:
         if d_str:
-            if 'SAuthB' in d_str:
+            if 'SAuthC' in d_str:
                 # add back the '}' character removed by the split method
                 d_str += '}'
                 # convert the dictionary string to a dictionary object
@@ -325,7 +325,7 @@ def formatB(Message):
     # iterate over the dictionary strings and extract the dictionary key-value pairs
     for d_str in dict_strings:
         if d_str:
-            if 'KeyExchangeC' in d_str:
+            if 'KeyExchangeB' in d_str:
                 # add back the '}' character removed by the split method
                 d_str += '}'
                 # convert the dictionary string to a dictionary object
@@ -414,12 +414,12 @@ while connected:
     client.send(Message.encode(FORMAT))
 
 # Wait for up to 5 seconds to receive data from the client
-ready, _, _ = select.select([client],[], 5)
-if not ready:
-    print('No data received within 5 seconds')
-else:
-    data = client.recv(2048).decode(FORMAT)
-    print('Received data:', data)
+    ready, _, _ = select.select([client],[], 5)
+    if not ready:
+         print('No data received within 5 seconds')
+    else:
+        data = client.recv(2048).decode(FORMAT)
+        print('Received data:', data)
 
 
 input()
