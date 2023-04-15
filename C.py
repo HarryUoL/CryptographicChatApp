@@ -1,12 +1,21 @@
 import ast
+import select
 import socket
 import rsa
 import json
+import random
+from Crypto.Cipher import AES
+import Crypto
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.kdf.hkdf import HKDF
+from Crypto.Util.Padding import pad, unpad
 
 ###test
-NonceC1 = 3
+NonceB1 = 0
 NonceS = 0
-NonceC = 2
+NonceC = random.randint(0, 2**64-1)
+ANonce = 0
+BNonce = 0
 ###test
 
 HEADER = 64
@@ -26,7 +35,7 @@ certA = {
     "publicKey": None
 }
 certB = {
-    "messagetype": "certB",
+    "messagetype": "certC",
     "publicKey": None
 }
 CrespondS = {
@@ -101,17 +110,17 @@ def send(msg):
    # eNonceA = encrypt(str(NonceA), certB['publicKey'])
     eNonceC = encrypt(str(NonceC), certA['publicKey'])
     #eNonceB = encrypt(str(NonceB), pubKeyS)
-    KeyExchangeA.update({'eNonceB': eNonceC})
+    KeyExchangeA.update({'eNonceC': eNonceC})
     #DS
-    msgtoDS = str(KeyExchangeA['senderidentity']) + str(KeyExchangeA['recieveridentity']) + str(KeyExchangeA['eNonceA'])
+    msgtoDS = str(KeyExchangeA['senderidentity']) + str(KeyExchangeA['recieveridentity']) + str(KeyExchangeA['eNonceC'])
     DSA = digitalsignature(msgtoDS, privKey)
     KeyExchangeA.update({'DS': DSA})
 
-# KeyExchangeC
+# KeyExchangeB
     #change aswell *******
     #eNonceA = encrypt(NonceA, certC['publicKey'])
-    eNonceC = encrypt(str(NonceC), pubKeyS)
-    KeyExchangeA.update({'eNonceC': eNonceC})
+    eNonceC = encrypt(str(NonceC), certB['publicKey'])
+    KeyExchangeB.update({'eNonceC': eNonceC})
     # DS
     msgtoDS = str(KeyExchangeB['senderidentity']) + str(KeyExchangeB['recieveridentity']) + str(KeyExchangeB['eNonceC'])
     DSB = digitalsignature(msgtoDS, privKey)
@@ -122,7 +131,7 @@ def send(msg):
     stringtosend = str(KeyExchangeA) + 'split' + str(KeyExchangeB)
     client.send(stringtosend.encode(FORMAT))
 
-    ###THESE SHOULD THE MESSAGES FROM B AND C
+    ###THESE SHOULD THE MESSAGES FROM A AND B
     recievedMessage1 = client.recv(2048).decode(FORMAT)
     recievedMessage2 = client.recv(2048).decode(FORMAT)
 
@@ -131,24 +140,90 @@ def send(msg):
     ##FIRSTLY CHANGE STR TO DICT
     # CAuth # out as it is just dummy data atm
 
-    AAuthA = formatA(recievedMessage1)
-    # CAuthA = formatC(recievedMessage2)
+    AAuthC = formatA(recievedMessage1)
+    BAuthC = formatB(recievedMessage2)
 
     ####GOT TO DO THIS FOR C
-    msgtoverifyagainst = str(AAuthA['senderidentity']) + str(AAuthA['recieveridentity']) + str(AAuthA['eNonceC'])
-    verifyA = verifyDS(msgtoverifyagainst, AAuthA['DS'], certA['publicKey'])
+    msgtoverifyagainst = str(AAuthC['senderidentity']) + str(AAuthC['recieveridentity']) + str(AAuthC['eNonceA'])
+    verifyA = verifyDS(msgtoverifyagainst, AAuthC['DS'], certA['publicKey'])
+
+    #FOR C
+    msgtoverifyagainst = str(BAuthC['senderidentity']) + str(BAuthC['recieveridentity']) + str(BAuthC['eNonceB'])
+    verifyB = verifyDS(msgtoverifyagainst, BAuthC['DS'], BAuthC['publicKey'])
+
 
     if verifyA == 'true':
         # BNonce = decrypt(BAuthA['eNonceB', privKey])
         # stringtodecrypt =
-        ANonce = decrypt(AAuthA['eNonceA'], privKey)
+        ANonce = decrypt(AAuthC['eNonceA'], privKey)
+
+    if verifyB == 'true':
+        # BNonce = decrypt(BAuthA['eNonceB', privKey])
+        # stringtodecrypt =
+        BNonce = decrypt(BAuthC['eNonceB'], privKey)
+
+    #########HERE WE START WITH AES (GOT TO DO ABOVE FOR C ASWELL)
+
+###CHANGE NONCES TO BYTES
+ANonce = ANonce.to_bytes(8, byteorder='big')
+BNonce = BNonce.to_bytes(8, byteorder='big')
+CNonce = NonceC.to_bytes(8, byteorder='big')
+
+
+###JOIN THEM TO CREATE KEY
+# Combine the nonces using HKDF
+key_material = ANonce + BNonce + CNonce
+hkdf = HKDF(
+    algorithm=hashes.SHA256(),
+    length=24,  # 32 bytes = 256 bits
+    salt=None,
+    info=b'',
+)
+key = hkdf.derive(key_material)
+
+
+cipher = AES.new(key, AES.MODE_ECB)
+decipher = AES.new(key, AES.MODE_ECB)
 
 
 
-    #storeCerts(res1)
-    #print("certB=" + str(certB))
-    #print("recieved message=" + recievingMessage)
-    #print(client.recv(2048).decode(FORMAT))
+
+
+
+
+def AESDecrypt(message, decipher):
+    # Unpad the data using PKCS#7 padding
+    # unpadded_data = unpad(padded_data, block_size)
+    dMessage = decipher.decrypt(message)
+    dMessage = unpad(dMessage, AES.block_size).decode('utf-8')
+
+    return dMessage
+
+def AESEncrypt(message, cipher):
+
+    message = message.encode('utf-8')
+    # Pad the plaintext to the nearest block boundary using PKCS#7 padding
+    # padded_Hello = pad(Hello, AES.block_size)
+    # Pad the data using PKCS#7 padding
+    block_size = 16
+    padding = block_size - len(message) % block_size
+    padded_data = message + bytes([padding] * padding)
+
+    eMessage = cipher.encrypt(padded_data)
+    return eMessage
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 def createCertA(Message):
@@ -178,20 +253,20 @@ def createCertA(Message):
 def createCertB(Message):
     Cert1 = Message.split("split")
     Cert1 = Cert1[0]
-    Cert1 = Cert1.replace("PublicKey", "")
+    #Cert1 = Cert1.replace("PublicKey", "")
     dict_strings = Cert1.split('}')
 
     # iterate over the dictionary strings and extract the dictionary key-value pairs
     for d_str in dict_strings:
         if d_str:
-            if 'certB' in d_str:
+            if 'certC' in d_str:
                 # add back the '}' character removed by the split method
                 d_str += '}'
                 # convert the dictionary string to a dictionary object
 
                 d_dict = eval(d_str)
 
-    d_dict['publicKey'] = rsa.PublicKey(d_dict['publicKey'][0], d_dict['publicKey'][1])
+    #d_dict['publicKey'] = rsa.PublicKey(d_dict['publicKey'][0], d_dict['publicKey'][1])
     return d_dict
 
 
@@ -206,7 +281,7 @@ def createSAuthC(Message):
     # iterate over the dictionary strings and extract the dictionary key-value pairs
     for d_str in dict_strings:
         if d_str:
-            if 'SAuthC' in d_str:
+            if 'SAuthB' in d_str:
                 # add back the '}' character removed by the split method
                 d_str += '}'
                 # convert the dictionary string to a dictionary object
@@ -250,7 +325,7 @@ def formatB(Message):
     # iterate over the dictionary strings and extract the dictionary key-value pairs
     for d_str in dict_strings:
         if d_str:
-            if 'KeyExchangeB' in d_str:
+            if 'KeyExchangeC' in d_str:
                 # add back the '}' character removed by the split method
                 d_str += '}'
                 # convert the dictionary string to a dictionary object
@@ -302,10 +377,10 @@ def verifyDS(msgVerify, signature, key):
 def storeCerts(cert):
 
     if cert['messagetype'] == "certB":
-        certA.update({'publicKey': cert['Key']})
-
-    elif cert['messagetype'] == "certC":
         certB.update({'publicKey': cert['Key']})
+
+    elif cert['messagetype'] == "certA":
+        certA.update({'publicKey': cert['Key']})
 
 def formatMsg(msg):
     msg = msg.replace("PublicKey", "")
@@ -320,33 +395,31 @@ certificate = {
     "Key": pubKeys,
     "Identity": "C",
     "messagetype": "certC",
-    "Nonce1": 4,
+    "Nonce1": 0,
     "DigitalSignature": DS
 
 }
 ####
-
+Nonce1 = random.randint(0, 2**64-1)
+certificate.update({'Nonce1': Nonce1})
 msg = formatMsg(str(certificate))
 send(msg)
 
 
 
-####example of using encrypt,decrypt, digital signature and verify functions
-##encrypt
-#print("encrypted message-->" + str(encrypt(certificate['Identity'], certificate['Key'])))
 
-#decrypt
-#encryptedText = encrypt(certificate['Identity'], certificate['Key'])
-#print("decrypted message-->" + str(decrypt(encryptedText, privKey)))
+connected = True
+while connected:
+    Message = input("What is your Message? ")
+    client.send(Message.encode(FORMAT))
 
-#digital signature
-#print("Digital Signature-->" + str(digitalsignature(certificate['Identity']+str(certificate['Key']), privKey)))
-#digitalSignature = digitalsignature(certificate['Identity']+str(certificate['Key']), privKey)
+# Wait for up to 5 seconds to receive data from the client
+ready, _, _ = select.select([client],[], 5)
+if not ready:
+    print('No data received within 5 seconds')
+else:
+    data = client.recv(2048).decode(FORMAT)
+    print('Received data:', data)
 
-##verify digital signature
-#it returns true if it verifys it and false if it doesn't
-#print(verifyDS(certificate['Identity']+str(certificate['Key']), digitalSignature, pubKeys))
 
 input()
-
-#send(DISCONNECT_MESSAGE)

@@ -69,6 +69,8 @@ SharedAuth = {
     'CB':'3'
 
 }
+MessagesDict = {}
+
 ####FUNCTIONS FOR THE OPERATIONS
 def hash(message):
     # Create a hash object with the specified algorithm
@@ -213,12 +215,11 @@ def handle_client(conn, addr):
             while verification == 'true':
                 if identity == 'A' and (certB['publicKey'] == None or certC['publicKey'] == None):
                       #  while (certB['publicKey'] == None or certC['publicKey'] == None):
-                            event.clear()
-                            print("****WAITING*****!!!!!!!!!")
-                            event.wait()
-                            event.set()
+                         time.sleep(5)
+                         print("****WAITING*****!!!!!!!!!")
+
                 elif identity == 'A' and (certB['publicKey'] != None and certC['publicKey'] != None):
-                        print("THIS SHOULD BE CERT B-->" + str(certB))
+
                         conn.send(str(certB).encode(FORMAT))
 
                         stringtoSend = str(certC)
@@ -265,8 +266,18 @@ def handle_client(conn, addr):
 
                 break
 
+        ##### I NEED A NEW FUNCTION FOR TRANSFERRING AES COMMUNICATION LIKE ABOVE
+        i = 0
+        while connected:
 
-##### I NEED A NEW FNCTION FOR TRANSFERRING AES COMMUNICATION LIKE ABOVE
+            i += 1
+            #THIS STORES MESSAGE IN DICT
+            msgtoStore = conn.recv(2048).decode(FORMAT)
+            MessagesDict[str(identity)+str(i)] = msgtoStore
+
+            #NOW SEND DICT BACK
+            conn.send(str(MessagesDict).encode(FORMAT))
+
 
 
 
