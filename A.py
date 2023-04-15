@@ -404,16 +404,24 @@ send(msg)
 
 connected = True
 while connected:
-    Message = input("What is your Message? ")
-    client.send(Message.encode(FORMAT))
+    read_sockets, _, exception_sockets = select.select([client], [client], [client])
 
-    # Wait for up to 5 seconds to receive data from the client
-    ready, _, _ = select.select([client],[], 5)
-    if not ready:
-     print('No data received within 5 seconds')
-    else:
-      data = client.recv(2048).decode(FORMAT)
-      print('Received data:', data)
+    # handle any exceptions that may have occurred
+    for sock in exception_sockets:
+        print('Error occurred with socket:', sock)
+
+    # receive any incoming messages from the server
+    for sock in read_sockets:
+        message = sock.recv(2048).decode(FORMAT)
+        if not message:
+            print('Server has disconnected.')
+            # exit()
+        print('Received message:', message)
+
+    # allow the user to input a message to send to the server
+    message = input('Enter message to send: ')
+    if message:
+        client.send(message.encode(FORMAT))
 
 input()
 #send(DISCONNECT_MESSAGE)
