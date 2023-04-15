@@ -2,9 +2,10 @@ import ast
 import socket
 import rsa
 import json
+import random
 
 ###test
-NonceB1 = 3
+NonceB1 = 0
 NonceS = 0
 NonceB = 2
 ###test
@@ -135,7 +136,7 @@ def send(msg):
     # CAuthA = formatC(recievedMessage2)
 
     ####GOT TO DO THIS FOR C
-    msgtoverifyagainst = str(AAuthA['senderidentity']) + str(AAuthA['recieveridentity']) + str(AAuthA['eNonceB'])
+    msgtoverifyagainst = str(AAuthA['senderidentity']) + str(AAuthA['recieveridentity']) + str(AAuthA['eNonceA'])
     verifyA = verifyDS(msgtoverifyagainst, AAuthA['DS'], certA['publicKey'])
 
     if verifyA == 'true':
@@ -149,6 +150,21 @@ def send(msg):
     #print("certB=" + str(certB))
     #print("recieved message=" + recievingMessage)
     #print(client.recv(2048).decode(FORMAT))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 def createCertA(Message):
@@ -320,12 +336,13 @@ certificate = {
     "Key": pubKeys,
     "Identity": "B",
     "messagetype": "certB",
-    "Nonce1": 4,
+    "Nonce1": 0,
     "DigitalSignature": DS
 
 }
 ####
-
+Nonce1 = random.randint(0, 2**64-1)
+certificate.update({'Nonce1': Nonce1})
 msg = formatMsg(str(certificate))
 send(msg)
 

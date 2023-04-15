@@ -1,12 +1,18 @@
 import ast
 import socket
 import rsa
+import random
 import json
+from Crypto.Cipher import AES
+import os
+from cryptography.hazmat.primitives import hashes, hmac
+from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 
 ###test
-NonceA1 = 3
-NonceS = 0
-NonceA = 2
+#NonceA1 = 3
+#NonceS = 0
+#NonceA = 2
+NonceA = random.randint(0, 2**64-1)
 ###test
 
 HEADER = 64
@@ -147,12 +153,7 @@ def send(msg):
 
 
 
-    #storeCerts(res1)
-    #print("certB=" + str(certB))
-    #print("recieved message=" + recievingMessage)
-    #print(client.recv(2048).decode(FORMAT))
-
-
+#########HERE WE START WITH AES (GOT TO DO ABOVE FOR C ASWELL)
 
 
 
@@ -324,15 +325,18 @@ def formatMsg(msg):
 #digitalsignature(certificate['Identity']+str(certificate['Key']), privKey)
 DS = digitalsignature(Identity+str(pubKeys), privKey)
 
+
 certificate = {
     "Key": pubKeys,
     "Identity": "A",
     "messagetype": "certA",
-    "Nonce1": 4,
+    "Nonce1": 0,
     "DigitalSignature": DS
 
 }
 ####
+Nonce1 = random.randint(0, 2**64-1)
+certificate.update({'Nonce1': Nonce1})
 
 msg = formatMsg(str(certificate))
 send(msg)

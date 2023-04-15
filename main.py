@@ -5,6 +5,7 @@ from threading import Event
 import rsa
 import ast
 import hashlib
+import random
 
 HEADER = 64
 PORT = 5050
@@ -32,12 +33,13 @@ certC = {
     "publicKey": 3
 }
 ##this should be got from when A sends cert originally
-NonceA1 = 3
+NonceA1 = 0
 NonceB1 = 0
 NonceC1 = 0
 Nonce1=0
 ##this is S nonce which needs to be created dynamically
-NonceS = 5
+#NonceS = 5
+NonceS = random.randint(0, 2**64-1)
 #(NonceS,NonceA1)
 #"NonceS&A1":
 # "NonceS":
@@ -175,7 +177,7 @@ def handle_client(conn, addr):
                         conn.send(split.encode(FORMAT))
 
                     elif  messagetype == "certC":
-                        SAuthA.update({'DSC': (DSA, DSA2)})
+                        SAuthC.update({'DSC': (DSA, DSA2)})
                         conn.send(str(SAuthC).encode(FORMAT))
                         split = "split"
                         conn.send(split.encode(FORMAT))
@@ -262,6 +264,11 @@ def handle_client(conn, addr):
                 conn.send(str(msgtorecieve2).encode(FORMAT))
 
                 break
+
+
+##### I NEED A NEW FNCTION FOR TRANSFERRING AES COMMUNICATION LIKE ABOVE
+
+
 
 
 
@@ -372,12 +379,4 @@ def start():
 
 print("[STARTING] server is starting...")
 start()
-
-
-
-
-
-
-
-
 
