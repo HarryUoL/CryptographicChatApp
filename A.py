@@ -172,30 +172,31 @@ def send(msg):
         print(CNonce)
 
 
-#########HERE WE START WITH AES (GOT TO DO ABOVE FOR C ASWELL)
-
-###CHANGE NONCES TO BYTES
-ANonce = NonceA.to_bytes(8, byteorder='big')
-BNonce = BNonce.to_bytes(8, byteorder='big')
-CNonce = CNonce.to_bytes(8, byteorder='big')
-
-
-###JOIN THEM TO CREATE KEY
-# Combine the nonces using HKDF
-key_material = ANonce + BNonce + CNonce
-hkdf = HKDF(
-    algorithm=hashes.SHA256(),
-    length=24,  # 32 bytes = 256 bits
-    salt=None,
-    info=b'',
-)
-key = hkdf.derive(key_material)
-
-print(key)
-cipher = AES.new(key, AES.MODE_ECB)
-decipher = AES.new(key, AES.MODE_ECB)
+    #########HERE WE START WITH AES (GOT TO DO ABOVE FOR C ASWELL)
+    BNonce = int(BNonce)
+    CNonce = int(CNonce)
+    ###CHANGE NONCES TO BYTES
+    ANonce = NonceA.to_bytes(8, byteorder='big')
+    BNonce = BNonce.to_bytes(8, byteorder='big')
+    CNonce = CNonce.to_bytes(8, byteorder='big')
 
 
+    ###JOIN THEM TO CREATE KEY
+    # Combine the nonces using HKDF
+    key_material = ANonce + BNonce + CNonce
+    hkdf = HKDF(
+        algorithm=hashes.SHA256(),
+        length=24,  # 32 bytes = 256 bits
+        salt=None,
+        info=b'',
+    )
+    key = hkdf.derive(key_material)
+
+    print(key)
+    cipher = AES.new(key, AES.MODE_ECB)
+    decipher = AES.new(key, AES.MODE_ECB)
+
+    return cipher, decipher
 
 
 
@@ -400,7 +401,7 @@ Nonce1 = random.randint(0, 2**64-1)
 certificate.update({'Nonce1': Nonce1})
 
 msg = formatMsg(str(certificate))
-send(msg)
+cipher, decipher = send(msg)
 
 
 

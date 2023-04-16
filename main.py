@@ -273,7 +273,7 @@ def handle_client(conn, addr):
         while connected:
             #try:
 
-
+                  i += 1
                   message = conn.recv(2048)
                                 #.decode(FORMAT)
                   if message:
