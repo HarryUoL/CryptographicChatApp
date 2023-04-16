@@ -1,3 +1,4 @@
+import select
 import socket
 import threading
 import time
@@ -269,14 +270,32 @@ def handle_client(conn, addr):
         ##### I NEED A NEW FUNCTION FOR TRANSFERRING AES COMMUNICATION LIKE ABOVE
         i = 0
         while connected:
+            read_sockets, _, exception_sockets = select.select([conn], [], [])
 
-            i += 1
-            #THIS STORES MESSAGE IN DICT
-            msgtoStore = conn.recv(2048).decode(FORMAT)
-            MessagesDict[str(identity)+str(i)] = msgtoStore
+            # handle any exceptions that may have occurred
+            for sock in exception_sockets:
+                print('Error occurred with socket:', sock)
 
-            #NOW SEND DICT BACK
+            # receive any incoming messages from the server
+            time.sleep(2)
+            for sock in read_sockets:
+                message = sock.recv(2048).decode(FORMAT)
+                if not message:
+                    print('no message')
+                    # exit()
+                i += 1
+                MessagesDict[str(identity)+str(i)] = message
+
+
+                time.sleep(2)
+
             conn.send(str(MessagesDict).encode(FORMAT))
+
+
+
+
+
+
 
 
 

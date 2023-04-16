@@ -413,9 +413,11 @@ while connected:
     # receive any incoming messages from the server
     for sock in read_sockets:
         message = sock.recv(2048).decode(FORMAT)
-        if not message:
-            print('Server has disconnected.')
-            # exit()
+
+        #if not message:
+           #   print('Server has disconnected.')
+              # exit()
+
         print('Received message:', message)
 
     # allow the user to input a message to send to the server
