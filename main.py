@@ -271,20 +271,20 @@ def handle_client(conn, addr):
 
         i = 0
         while connected:
-            try:
+            #try:
 
 
-                  message = conn.recv(1024)
-
+                  message = conn.recv(2048)
+                                #.decode(FORMAT)
                   if message:
                      # Update the dictionary with the received message
-                     MessagesDict[str(identity)+str(i)] = message.decode()
+                     MessagesDict[str(identity)+str(i)] = message
 
                      time.sleep(2)
                      conn.send(str(MessagesDict).encode(FORMAT))
-
-            except:
-                pass
+                        #.encode(FORMAT)
+            #except:
+             #   pass
 
 
     conn.close()

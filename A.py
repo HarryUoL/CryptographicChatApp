@@ -413,16 +413,17 @@ while connected:
     message = input('Enter message to send: ')
     if message:
         message = AESEncrypt(message, cipher)
-        client.send(message.encode(FORMAT))
+        client.send(message)
 
 
     message = input('Press enter to update messages ')
 
     # receive any incoming messages from the server
 
-    message = client.recv(2048).decode(FORMAT)
+    message = client.recv(2048)
 
     if message:
+        #message = message.encode(FORMAT)
         message = AESDecrypt(message, decipher)
         print('Received message:', message)
 
