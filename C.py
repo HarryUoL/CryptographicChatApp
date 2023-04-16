@@ -405,29 +405,28 @@ certificate.update({'Nonce1': Nonce1})
 msg = formatMsg(str(certificate))
 send(msg)
 
-
-
-
 connected = True
 while connected:
-    read_sockets, _, exception_sockets = select.select([client], [client], [client])
 
-    # handle any exceptions that may have occurred
-    for sock in exception_sockets:
-        print('Error occurred with socket:', sock)
-
-    # receive any incoming messages from the server
-    for sock in read_sockets:
-        message = sock.recv(2048).decode(FORMAT)
-        if not message:
-            print('Server has disconnected.')
-            #exit()
-        print('Received message:', message)
-
-    # allow the user to input a message to send to the server
     message = input('Enter message to send: ')
     if message:
+        message = AESEncrypt(message, cipher)
         client.send(message.encode(FORMAT))
+
+    message = input('Press enter to update messages ')
+
+    # receive any incoming messages from the server
+
+    message = client.recv(2048).decode(FORMAT)
+
+    if message:
+        message = AESDecrypt(message, decipher)
+        print('Received message:', message)
+
+    else:
+       print('Received message:', message)
+
+
 
 
 input()

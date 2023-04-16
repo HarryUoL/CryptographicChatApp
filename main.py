@@ -268,38 +268,23 @@ def handle_client(conn, addr):
                 break
 
         ##### I NEED A NEW FUNCTION FOR TRANSFERRING AES COMMUNICATION LIKE ABOVE
+
         i = 0
         while connected:
-            read_sockets, _, exception_sockets = select.select([conn], [], [])
-
-            # handle any exceptions that may have occurred
-            for sock in exception_sockets:
-                print('Error occurred with socket:', sock)
-
-            # receive any incoming messages from the server
-            time.sleep(2)
-            for sock in read_sockets:
-                message = sock.recv(2048).decode(FORMAT)
-                if not message:
-                    print('no message')
-                    # exit()
-                i += 1
-                MessagesDict[str(identity)+str(i)] = message
+            try:
 
 
-                time.sleep(2)
+                  message = conn.recv(1024)
 
-            conn.send(str(MessagesDict).encode(FORMAT))
+                  if message:
+                     # Update the dictionary with the received message
+                     MessagesDict[str(identity)+str(i)] = message.decode()
 
+                     time.sleep(2)
+                     conn.send(str(MessagesDict).encode(FORMAT))
 
-
-
-
-
-
-
-
-
+            except:
+                pass
 
 
     conn.close()
