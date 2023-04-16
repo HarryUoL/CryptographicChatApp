@@ -280,7 +280,7 @@ def handle_client(conn, addr):
                      # Update the dictionary with the received message
                      MessagesDict[str(identity)+str(i)] = message
 
-                     time.sleep(2)
+                     #time.sleep(2)
                      conn.send(str(MessagesDict).encode(FORMAT))
                         #.encode(FORMAT)
             #except:

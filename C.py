@@ -181,7 +181,7 @@ hkdf = HKDF(
 )
 key = hkdf.derive(key_material)
 
-
+print(key)
 cipher = AES.new(key, AES.MODE_ECB)
 decipher = AES.new(key, AES.MODE_ECB)
 
@@ -405,13 +405,16 @@ certificate.update({'Nonce1': Nonce1})
 msg = formatMsg(str(certificate))
 send(msg)
 
+
 connected = True
+messagesDict = {}
 while connected:
 
     message = input('Enter message to send: ')
     if message:
         message = AESEncrypt(message, cipher)
-        client.send(message.encode(FORMAT))
+        client.send(message)
+
 
     message = input('Press enter to update messages ')
 
@@ -420,11 +423,20 @@ while connected:
     message = client.recv(2048).decode(FORMAT)
 
     if message:
-        message = AESDecrypt(message, decipher)
-        print('Received message:', message)
+        #message = message.encode(FORMAT)
+        messages = eval(message)
+
+        # Iterate over the values of the dictionary and decrypt each one
+        for key in messages:
+            messagesToStore = AESDecrypt(messages[key], decipher)
+            #encrypted_dict[key] = encrypted_value
+            messagesDict[key] = messagesToStore
+
+        #message = AESDecrypt(message, decipher)
+        print('Received message:', messagesDict)
 
     else:
-       print('Received message:', message)
+       print('Received message:', messagesDict)
 
 
 

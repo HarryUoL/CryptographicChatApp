@@ -191,7 +191,7 @@ hkdf = HKDF(
 )
 key = hkdf.derive(key_material)
 
-
+print(key)
 cipher = AES.new(key, AES.MODE_ECB)
 decipher = AES.new(key, AES.MODE_ECB)
 
@@ -408,6 +408,7 @@ send(msg)
 
 
 connected = True
+messagesDict = {}
 while connected:
 
     message = input('Enter message to send: ')
@@ -424,11 +425,19 @@ while connected:
 
     if message:
         #message = message.encode(FORMAT)
-        message = AESDecrypt(message, decipher)
-        print('Received message:', message)
+        messages = eval(message)
+
+        # Iterate over the values of the dictionary and decrypt each one
+        for key in messages:
+            messagesToStore = AESDecrypt(messages[key], decipher)
+            #encrypted_dict[key] = encrypted_value
+            messagesDict[key] = messagesToStore
+
+        #message = AESDecrypt(message, decipher)
+        print('Received message:', messagesDict)
 
     else:
-       print('Received message:', message)
+       print('Received message:', messagesDict)
 
 
 
