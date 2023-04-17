@@ -81,7 +81,7 @@ def send(msg):
     ##this formats SAuthA from string to dict for us
     SAuthB = createSAuthB(recievingMessage)
     #verifys if s responds to nonce
-    verified = verifyDS(str(certificate['Nonce1']), SAuthB['DSB'][0], pubKeyS)
+    verified = verifyDS(nonce1, SAuthB['DSB'][0], pubKeyS)
     if verified == 'true':
         ##here we verified our own nonce so we now have to send back nonce of s
         ##encrypted with Ks and the same digitally signed
@@ -186,7 +186,7 @@ def send(msg):
         info=b'',
 )
     key = hkdf.derive(key_material)
-    print(key)
+
 
     cipher = AES.new(key, AES.MODE_ECB)
     decipher = AES.new(key, AES.MODE_ECB)
@@ -408,6 +408,9 @@ certificate = {
 }
 ####
 Nonce1 = random.randint(0, 2**64-1)
+Nonce1 = str(Nonce1)
+nonce1 = Nonce1
+Nonce1 = encrypt(Nonce1, pubKeyS)
 certificate.update({'Nonce1': Nonce1})
 msg = formatMsg(str(certificate))
 cipher, decipher = send(msg)

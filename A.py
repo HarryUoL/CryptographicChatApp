@@ -75,13 +75,14 @@ def send(msg):
     send_length += b' ' * (HEADER - len(send_length))
     client.send(send_length)
 
-    ##sending the cert
+    ##sending the cert, nonce encrypted with ks and digital signature
     client.send(message)
 
     print('waiting for others...')
     time.sleep(5)
     print('Enter to start')
     input()
+
     ####this is the recieved message which we need to verify from S
     recievingMessage = client.recv(2048).decode(FORMAT)
 
@@ -89,10 +90,12 @@ def send(msg):
     ##this formats SAuthA from string to dict for us
     SAuthA = createSAuthA(recievingMessage)
 
+
     #verifys if s responds to nonce
-    verified = verifyDS(str(certificate['Nonce1']), SAuthA['DSA'][0], pubKeyS)
+    #this checks if it correctly responded to our nonce
+    verified = verifyDS(nonce1, SAuthA['DSA'][0], pubKeyS)
     if verified == 'true':
-        ##here we verified our own nonce so we now have to send back nonce of s
+        ##here we verified our own nonce so we now have to send back nonce of S
         ##encrypted with Ks and the same digitally signed
         NonceS = decrypt(SAuthA['NonceA1&S'][1], privKey)
         eNonceS = encrypt(NonceS, pubKeyS)
@@ -120,19 +123,19 @@ def send(msg):
 # I NEED TO ADD DIGITAL SIGNATURE OF ALL OF IT TO DS
 
 #KeyExchangeB
-    ##how it should be on top
-   # eNonceA = encrypt(str(NonceA), certB['publicKey'])
+
+    #encrypt our part of key with their public key
     eNonceA = encrypt(str(NonceA), certB['publicKey'])
     KeyExchangeB.update({'eNonceA': eNonceA})
-    #DS
+
+    #DS of identities and the part of the key
     msgtoDS = str(KeyExchangeB['senderidentity']) + str(KeyExchangeB['recieveridentity']) + str(KeyExchangeB['eNonceA'])
     DSB = digitalsignature(msgtoDS, privKey)
     KeyExchangeB.update({'DS': DSB})
 
 # KeyExchangeC
-    #change aswell *******
-    #
-    #eNonceA = encrypt(NonceA, certC['publicKey'])
+
+
     eNonceA = encrypt(str(NonceA), certC['publicKey'])
     KeyExchangeC.update({'eNonceA': eNonceA})
     # DS
@@ -145,20 +148,18 @@ def send(msg):
     stringtosend = str(KeyExchangeB) + 'split' + str(KeyExchangeC)
     client.send(stringtosend.encode(FORMAT))
 
-   ###THESE SHOULD THE MESSAGES FROM B AND C
+   ###THESE SHOULD BE THE MESSAGES FROM B AND C
     recievedMessage1 = client.recv(2048).decode(FORMAT)
     #recievedMessage2 = client.recv(2048).decode(FORMAT)
     recievedMessage2 = client.recv(2048).decode(FORMAT)
 
-##### I KNOW NEED TO VERIFY THE RECIEVED MESSAGES AND STORE THE NONCE IN THEM FOR PART OF KEY
+
 
 ##FIRSTLY CHANGE STR TO DICT
-#CAuth # out as it is just dummy data atm
-
     BAuthA = formatB(recievedMessage1)
     CAuthA = formatC(recievedMessage2)
 
-    ####GOT TO DO THIS FOR C
+    ####  VERIFY B
     msgtoverifyagainst = str(BAuthA['senderidentity']) + str(BAuthA['recieveridentity']) + str(BAuthA['eNonceB'])
     verifyB =  verifyDS(msgtoverifyagainst, BAuthA['DS'], certB['publicKey'])
 
@@ -166,20 +167,19 @@ def send(msg):
     msgtoverifyagainst2 = str(CAuthA['senderidentity']) + str(CAuthA['recieveridentity']) + str(CAuthA['eNonceC'])
     verifyC = verifyDS(msgtoverifyagainst2, CAuthA['DS'], certC['publicKey'])
 
+    #IF IT VERIFIES IT STORES THE NONCES
     if verifyB == 'true':
-        #BNonce = decrypt(BAuthA['eNonceB', privKey])
-        #stringtodecrypt =
+
         BNonce = decrypt(BAuthA['eNonceB'], privKey)
-        print(BNonce)
+
 
     if verifyC == 'true':
-        #BNonce = decrypt(BAuthA['eNonceB', privKey])
-        #stringtodecrypt =
+
         CNonce = decrypt(CAuthA['eNonceC'], privKey)
-        print(CNonce)
 
 
-    #########HERE WE START WITH AES (GOT TO DO ABOVE FOR C ASWELL)
+
+    #########HERE WE START WITH AES
     BNonce = int(BNonce)
     CNonce = int(CNonce)
     ###CHANGE NONCES TO BYTES
@@ -189,7 +189,7 @@ def send(msg):
 
 
     ###JOIN THEM TO CREATE KEY
-    # Combine the nonces using HKDF
+    # Combine the nonces using HKDF LIBRARY
     key_material = ANonce + BNonce + CNonce
     hkdf = HKDF(
         algorithm=hashes.SHA256(),
@@ -199,7 +199,7 @@ def send(msg):
     )
     key = hkdf.derive(key_material)
 
-    print(key)
+    #print(key)
     cipher = AES.new(key, AES.MODE_ECB)
     decipher = AES.new(key, AES.MODE_ECB)
 
@@ -210,8 +210,7 @@ def send(msg):
 
 
 def AESDecrypt(message, decipher):
-    # Unpad the data using PKCS#7 padding
-    # unpadded_data = unpad(padded_data, block_size)
+
     dMessage = decipher.decrypt(message)
     dMessage = unpad(dMessage, AES.block_size).decode('utf-8')
 
@@ -220,9 +219,7 @@ def AESDecrypt(message, decipher):
 def AESEncrypt(message, cipher):
 
     message = message.encode('utf-8')
-    # Pad the plaintext to the nearest block boundary using PKCS#7 padding
-    # padded_Hello = pad(Hello, AES.block_size)
-    # Pad the data using PKCS#7 padding
+    #PADS TO CORRECT SIZE
     block_size = 16
     padding = block_size - len(message) % block_size
     padded_data = message + bytes([padding] * padding)
@@ -233,15 +230,16 @@ def AESEncrypt(message, cipher):
 def createCertB(Message):
 
     Cert1= Message.split("split")
+    #CHANGES IT TO A LIST
     Cert1 = Cert1[0]
-    # new_string = my_string.replace("example", "")
+    #REMOVES PK FROM CHARACHTERS
     Cert1 = Cert1.replace("PublicKey", "")
+
     dict_strings = Cert1.split('}')
 
     # iterate over the dictionary strings and extract the dictionary key-value pairs
     for d_str in dict_strings:
         if d_str:
-
 
             if 'certB' in d_str:
                 # add back the '}' character removed by the split method
@@ -253,6 +251,7 @@ def createCertB(Message):
 
     d_dict['publicKey'] = rsa.PublicKey(d_dict['publicKey'][0],d_dict['publicKey'][1])
 
+    #verifyDS()
     return d_dict
 
 
@@ -373,8 +372,7 @@ def verifyDS(msgVerify, signature, key):
         false ='false'
         return false
 
-##keys
-
+##CREATES RSA KEYS
 (pubKeys, privKey) = rsa.newkeys(512)
 
 def storeCerts(cert):
@@ -390,13 +388,21 @@ def formatMsg(msg):
     return msg
 
 
-####with dict
-#digitalsignature(certificate['Identity']+str(certificate['Key']), privKey)
+
 
 ##this is the hash of our identity and publickey digitally signed with our private
+
+#4. Each step in establishing the Session key (Kabc) must provide an Authenticated Integrity check of the data
+#transferred. You must show both sides of this in your protocol design and description, i.e. its generation and
+#how it is checked.
+
+#5. Each Entity must Authenticate itself to the Server S before it is allowed to use its service.
 DS = digitalsignature(Identity+str(pubKeys), privKey)
 
+#OUR CERT, NOT FULLY POPULATED
 
+##2. Each entity (A, B, C and S) have a Public Key Certificate, ie. CA<<A>>, CA<<B>>, CA<<C>> and CA<<S>>.
+## here we have certs
 certificate = {
     "Key": pubKeys,
     "Identity": "A",
@@ -405,8 +411,15 @@ certificate = {
     "DigitalSignature": DS
 
 }
-####
+####GENERATING NONCE
 Nonce1 = random.randint(0, 2**64-1)
+
+#encrypting challenge for S
+Nonce1 = str(Nonce1)
+nonce1 = Nonce1
+
+
+Nonce1 = encrypt(Nonce1, pubKeyS)
 
 certificate.update({'Nonce1': Nonce1})
 
@@ -417,7 +430,7 @@ cipher, decipher = send(msg)
 
 
 
-
+##SENDING AND RECIEVING MESSAGES VIA AES
 connected = True
 messagesDict = {}
 while connected:
@@ -435,16 +448,16 @@ while connected:
     message = client.recv(2048)
 
     if message:
-        #message = message.encode(FORMAT)
+        #TO DICT
         messages = eval(message)
 
         # Iterate over the values of the dictionary and decrypt each one
         for key in messages:
             messagesToStore = AESDecrypt(messages[key], decipher)
-            #encrypted_dict[key] = encrypted_value
+
             messagesDict[key] = messagesToStore
 
-        #message = AESDecrypt(message, decipher)
+
         print('Received message:', messagesDict)
 
     else:
