@@ -15,10 +15,8 @@ from Crypto.Util.Padding import pad, unpad
 import select
 
 
-###test
-#NonceA1 = 3
-#NonceS = 0
-#NonceA = 2
+#This is As part of Key
+#from 0 to largest number in 8 bytes
 NonceA = random.randint(0, 2**64-1)
 
 BNonce = 0
@@ -35,8 +33,10 @@ Identity ='A'
 client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 client.connect(ADDR)
 
+#public key of S
 pubKeyS = rsa.PublicKey(8368535986424301519677425007078978282009409033444347711859615499370048341703074655505522462102048766899036091098557433327396428069258465008565662942145717, 65537)
-privKeyS = rsa.PrivateKey(8368535986424301519677425007078978282009409033444347711859615499370048341703074655505522462102048766899036091098557433327396428069258465008565662942145717, 65537, 6652230812346619649497461482350221288425807910131936744084082717475350382459383323752051550397378681633251414741039522254878998390999853774646427340032513, 7565317343113682473003719157066451814412526235676237417376197496664743312864051731, 1106171176552395053279328787437653065548540673055795968788597324959395607)
+
+#certs
 certB = {
     "messagetype": "certB",
     "publicKey": None
@@ -51,6 +51,7 @@ ArespondS = {
     "DSNonceS": None
 
 }
+#used for key exchanges to b & C
 KeyExchangeB = {
     'messagetype': 'KeyExchangeA',
     'senderidentity': 'A',
@@ -73,15 +74,21 @@ def send(msg):
     send_length = str(msg_length).encode(FORMAT)
     send_length += b' ' * (HEADER - len(send_length))
     client.send(send_length)
-    client.send(message)
-    ####this is the recieved message
-    input()
 
+    ##sending the cert
+    client.send(message)
+
+    print('waiting for others...')
+    time.sleep(5)
+    print('Enter to start')
+    input()
+    ####this is the recieved message which we need to verify from S
     recievingMessage = client.recv(2048).decode(FORMAT)
-    #eval(recievingMessage)
+
 
     ##this formats SAuthA from string to dict for us
     SAuthA = createSAuthA(recievingMessage)
+
     #verifys if s responds to nonce
     verified = verifyDS(str(certificate['Nonce1']), SAuthA['DSA'][0], pubKeyS)
     if verified == 'true':
@@ -186,7 +193,7 @@ def send(msg):
     key_material = ANonce + BNonce + CNonce
     hkdf = HKDF(
         algorithm=hashes.SHA256(),
-        length=24,  # 32 bytes = 256 bits
+        length=24,  # 24 bytes = 192 bits
         salt=None,
         info=b'',
     )
@@ -385,6 +392,8 @@ def formatMsg(msg):
 
 ####with dict
 #digitalsignature(certificate['Identity']+str(certificate['Key']), privKey)
+
+##this is the hash of our identity and publickey digitally signed with our private
 DS = digitalsignature(Identity+str(pubKeys), privKey)
 
 
@@ -398,6 +407,7 @@ certificate = {
 }
 ####
 Nonce1 = random.randint(0, 2**64-1)
+
 certificate.update({'Nonce1': Nonce1})
 
 msg = formatMsg(str(certificate))
